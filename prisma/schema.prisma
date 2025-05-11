@@ -1,0 +1,66 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  phone     String?
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Vehicle {
+  id                 Int       @id @default(autoincrement())
+  registrationNumber String    @unique
+  name              String
+  model              String
+  image              String
+  capacity           Int
+  price              Int       @default(0)
+  originalPrice      Int       @default(0)
+  bookings           Booking[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+
+model City {
+  id        Int       @id @default(autoincrement())
+  name      String
+  state     String
+  fromBookings Booking[] @relation("BookingFromCity")
+  toBookings   Booking[] @relation("BookingToCity")
+}
+
+model TripType {
+  id       Int       @id @default(autoincrement())
+  label    String    @unique
+  bookings Booking[]
+}
+
+model Booking {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  vehicleId       Int
+  fromCityId      Int
+  toCityId        Int
+  pickupDateTime  DateTime
+  tripTypeId      Int
+  fare            Float
+  createdAt       DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  vehicle   Vehicle   @relation(fields: [vehicleId], references: [id])
+  fromCity  City      @relation("BookingFromCity", fields: [fromCityId], references: [id])
+  toCity    City      @relation("BookingToCity", fields: [toCityId], references: [id])
+  tripType  TripType  @relation(fields: [tripTypeId], references: [id])
+}
