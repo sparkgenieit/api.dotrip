@@ -8,7 +8,9 @@ export class CitiesService {
   create(data: { name: string; state: string }) {
     return this.prisma.city.create({ data });
   }
-
+  async createMany(data: { name: string; state: string }[]) {
+    return this.prisma.city.createMany({ data });
+  }
   findAll() {
     return this.prisma.city.findMany();
   }

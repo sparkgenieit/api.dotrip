@@ -11,7 +11,10 @@ export class CitiesController {
   create(@Body() dto: CreateCityDto) {
     return this.citiesService.create(dto);
   }
-
+  @Post('bulk')
+  createMany(@Body() cities: CreateCityDto[]) {
+    return this.citiesService.createMany(cities);
+  }
   @Get()
   findAll() {
     return this.citiesService.findAll();
