@@ -4,7 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { AddressBookModule } from './users/address-book/address-book.module.ts';
+import { AddressBookModule } from './users/address-book/address-book.module';
 
 
 import { VehiclesModule } from './vehicles/vehicles.module';

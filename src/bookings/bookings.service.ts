@@ -1,43 +1,54 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+// src/bookings/bookings.service.ts
+
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateBookingDto } from './dto/create-booking.dto';
+import { UpdateBookingDto } from './dto/update-booking.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class BookingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  create(data: {
-    userId: number;
-    vehicleId: number;
-    fromCityId: number;
-    toCityId: number;
-    pickupDateTime: string;
-    tripTypeId: number;
-    fare: number;
-  }) {
+  create(dto: CreateBookingDto) {
+    const data: Prisma.BookingUncheckedCreateInput = {
+      userId: dto.userId,
+      vehicleId: dto.vehicleId,
+      fromCityId: dto.fromCityId,
+      toCityId: dto.toCityId,
+      pickupAddress: dto.pickupAddress,
+      dropAddress: dto.dropAddress,
+      pickupDateTime: new Date(dto.pickupDateTime),
+      tripTypeId: dto.tripTypeId,
+      fare: dto.fare,
+    };
     return this.prisma.booking.create({ data });
   }
 
   findAll() {
-    return this.prisma.booking.findMany();
+    return this.prisma.booking.findMany({ orderBy: { id: 'desc' } });
   }
 
   findOne(id: number) {
     return this.prisma.booking.findUnique({ where: { id } });
   }
 
-  async update(id: number, data: any) {
-    await this.findOneOrFail(id);
+  update(id: number, dto: UpdateBookingDto) {
+    const data: Prisma.BookingUncheckedUpdateInput = {
+      userId: dto.userId,
+      vehicleId: dto.vehicleId,
+      fromCityId: dto.fromCityId,
+      toCityId: dto.toCityId,
+      pickupAddress: dto.pickupAddress,
+      dropAddress: dto.dropAddress,
+      pickupDateTime: dto.pickupDateTime ? new Date(dto.pickupDateTime) : undefined,
+      tripTypeId: dto.tripTypeId,
+      fare: dto.fare,
+    };
     return this.prisma.booking.update({ where: { id }, data });
   }
 
-  async remove(id: number) {
-    await this.findOneOrFail(id);
+  remove(id: number) {
     return this.prisma.booking.delete({ where: { id } });
-  }
-
-  private async findOneOrFail(id: number) {
-    const b = await this.prisma.booking.findUnique({ where: { id } });
-    if (!b) throw new NotFoundException(`Booking ${id} not found`);
-    return b;
   }
 }
