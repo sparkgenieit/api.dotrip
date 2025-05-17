@@ -1,5 +1,3 @@
-// schema.prisma
-
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
@@ -9,7 +7,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-/// All possible user roles
 enum Role {
   RIDER
   VENDOR
@@ -19,7 +16,6 @@ enum Role {
   SUPER_ADMIN
 }
 
-/// Address categories
 enum AddressType {
   HOME
   OFFICE
@@ -30,17 +26,18 @@ model User {
   id        Int            @id @default(autoincrement())
   name      String
   email     String         @unique
-  password  String         @default(uuid())   // ← random UUID if none provided
+  password  String         @default(uuid())
   phone     String?
   role      Role           @default(RIDER)
 
   bookings  Booking[]
   vehicles  Vehicle[]
-
-  addresses AddressBook[]  // ← relation to AddressBook
+  addresses AddressBook[]
 
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
+
+  @@map("user")
 }
 
 model Vehicle {
@@ -59,6 +56,8 @@ model Vehicle {
   bookings           Booking[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+
+  @@map("vehicle")
 }
 
 model City {
@@ -67,12 +66,16 @@ model City {
   state        String
   fromBookings Booking[] @relation("BookingFromCity")
   toBookings   Booking[] @relation("BookingToCity")
+
+  @@map("city")
 }
 
 model TripType {
   id       Int       @id @default(autoincrement())
   label    String    @unique
   bookings Booking[]
+
+  @@map("trip_type")
 }
 
 model Booking {
@@ -82,7 +85,7 @@ model Booking {
   fromCityId      Int
   toCityId        Int
   pickupAddress   String
-  dropAddress   String
+  dropAddress     String
   pickupDateTime  DateTime
   tripTypeId      Int
   fare            Float
@@ -93,6 +96,8 @@ model Booking {
   fromCity  City      @relation("BookingFromCity", fields: [fromCityId], references: [id])
   toCity    City      @relation("BookingToCity", fields: [toCityId], references: [id])
   tripType  TripType  @relation(fields: [tripTypeId], references: [id])
+
+  @@map("booking")
 }
 
 model AddressBook {
@@ -112,4 +117,6 @@ model AddressBook {
   updatedAt     DateTime     @updatedAt
 
   user          User         @relation(fields: [userId], references: [id])
+
+  @@map("address_book")
 }
