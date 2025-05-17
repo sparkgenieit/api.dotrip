@@ -4,10 +4,15 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { AddressBookModule } from './users/address-book/address-book.module.ts';
+
+
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { CitiesModule } from './cities/cities.module';
 import { TripTypesModule } from './trip-types/trip-types.module';
 import { BookingsModule } from './bookings/bookings.module';
+import { PlacesModule } from './places/places.module';
+
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
@@ -20,6 +25,8 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     CitiesModule,
     TripTypesModule,
     BookingsModule,
+    PlacesModule,
+    AddressBookModule
   ],
   providers: [
     {

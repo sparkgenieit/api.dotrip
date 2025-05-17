@@ -1,3 +1,4 @@
+
 import { Injectable } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
@@ -18,14 +19,12 @@ export class AuthService {
     try {
       user = await this.usersService.findByEmail(email);
     } catch {
-      // Treat missing user as invalid credentials
       return null;
     }
     const isMatch = await bcrypt.compare(pass, user.password);
     if (!isMatch) {
       return null;
     }
-    // Strip password before returning
     const { password, ...safeUser } = user;
     return safeUser;
   }
@@ -38,21 +37,55 @@ export class AuthService {
       expiresIn: '7d',
     });
 
-    response.cookie(JWT_ACCESS_COOKIE, accessToken, { httpOnly: true, sameSite: 'lax' });
-    response.cookie(JWT_REFRESH_COOKIE, refreshToken, { httpOnly: true, sameSite: 'lax' });
+    response.cookie(JWT_ACCESS_COOKIE, accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+      maxAge: 15 * 60 * 1000,
+    });
+
+    response.cookie(JWT_REFRESH_COOKIE, refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/auth/refresh',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     return { accessToken };
   }
 
   async refresh(user: any, response: Response) {
     const payload = { sub: user.sub, email: user.email };
     const accessToken = this.jwtService.sign(payload, { secret: jwtConstants.secret });
-    response.cookie(JWT_ACCESS_COOKIE, accessToken, { httpOnly: true, sameSite: 'lax' });
+
+    response.cookie(JWT_ACCESS_COOKIE, accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+      maxAge: 15 * 60 * 1000,
+    });
+
     return { accessToken };
   }
 
   async logout(response: Response) {
-    response.clearCookie(JWT_ACCESS_COOKIE);
-    response.clearCookie(JWT_REFRESH_COOKIE);
+    response.clearCookie(JWT_ACCESS_COOKIE, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+    });
+
+    response.clearCookie(JWT_REFRESH_COOKIE, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/auth/refresh',
+    });
+
     return { message: 'Logged out' };
   }
 }

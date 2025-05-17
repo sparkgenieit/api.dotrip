@@ -1,3 +1,5 @@
+// schema.prisma
+
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
@@ -7,36 +9,62 @@ generator client {
   provider = "prisma-client-js"
 }
 
+/// All possible user roles
+enum Role {
+  RIDER
+  VENDOR
+  DRIVER
+  ADMIN
+  SUPPORT_AGENT
+  SUPER_ADMIN
+}
+
+/// Address categories
+enum AddressType {
+  HOME
+  OFFICE
+  OTHER
+}
+
 model User {
-  id        Int       @id @default(autoincrement())
+  id        Int            @id @default(autoincrement())
   name      String
-  email     String    @unique
-  password  String
+  email     String         @unique
+  password  String         @default(uuid())   // ← random UUID if none provided
   phone     String?
+  role      Role           @default(RIDER)
+
   bookings  Booking[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  vehicles  Vehicle[]
+
+  addresses AddressBook[]  // ← relation to AddressBook
+
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 }
 
 model Vehicle {
   id                 Int       @id @default(autoincrement())
   registrationNumber String    @unique
-  name              String
+  name               String
   model              String
   image              String
   capacity           Int
   price              Int       @default(0)
   originalPrice      Int       @default(0)
+
+  vendorId           Int?
+  vendor             User?     @relation(fields: [vendorId], references: [id])
+
   bookings           Booking[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 }
 
-
 model City {
-  id        Int       @id @default(autoincrement())
-  name      String
-  state     String
+  id           Int       @id @default(autoincrement())
+  name         String
+  state        String
   fromBookings Booking[] @relation("BookingFromCity")
   toBookings   Booking[] @relation("BookingToCity")
 }
@@ -53,6 +81,8 @@ model Booking {
   vehicleId       Int
   fromCityId      Int
   toCityId        Int
+  pickupAddress   String
+  dropAddress   String
   pickupDateTime  DateTime
   tripTypeId      Int
   fare            Float
@@ -63,4 +93,23 @@ model Booking {
   fromCity  City      @relation("BookingFromCity", fields: [fromCityId], references: [id])
   toCity    City      @relation("BookingToCity", fields: [toCityId], references: [id])
   tripType  TripType  @relation(fields: [tripTypeId], references: [id])
+}
+
+model AddressBook {
+  id            Int          @id @default(autoincrement())
+  userId        Int
+  type          AddressType
+  name          String
+  addressLine1  String
+  buildingName  String
+  addressLine2  String?
+  flatNo        String?
+  city          String
+  state         String
+  phone         String
+  pinCode       String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  user          User         @relation(fields: [userId], references: [id])
 }
