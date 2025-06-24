@@ -1,85 +1,70 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
+
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { CreateAddressBookDto } from './address-book/dto/create-address-book.dto';
-import { User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-  create(
-    dto: CreateUserDto & { addresses?: CreateAddressBookDto[] }
-  ): Promise<User> {
-    const { addresses, ...userData } = dto;
+  async create(dto: CreateUserDto) {
+
+     let plainPassword: string;
+    if (dto.password && dto.password.length > 0) {
+      plainPassword = dto.password;
+    } else {
+      // Generate a random 16‐byte hex string (32 characters) as a fallback password:
+      plainPassword = randomBytes(16).toString('hex');
+      // e.g. "9f74ab2c5d1e4f0a3b8c7e2d4a1b0c9f"
+    }
+
+    // 3) Hash the password:
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
     return this.prisma.user.create({
       data: {
-        ...userData,
-        addresses: addresses?.length
-          ? {
-              create: addresses.map((a) => ({
-                type:          a.type,
-                name:          a.name,
-                addressLine1:  a.addressLine1,
-                buildingName:  a.buildingName,
-                addressLine2:  a.addressLine2,
-                flatNo:        a.flatNo,
-                city:          a.city,
-                state:         a.state,
-                phone:         a.phone,
-                pinCode:       a.pinCode,
-              })),
-            }
-          : undefined,
+        name:     dto.name,
+        email:    dto.email,
+        password: hashedPassword,
+        phone:    dto.phone,
+        role:     dto.role,
       },
     });
   }
 
-  async findByEmail(email: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+  async findAll() {
+    return this.prisma.user.findMany();
+  }
+
+  async findOne(id: number) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
-  findAll() {
-    return this.prisma.user.findMany();
-  }
-
-  findOne(id: number) {
-    return this.prisma.user.findUnique({ where: { id } });
-  }
-
-  update(
-    id: number,
-    dto: UpdateUserDto & { addresses?: CreateAddressBookDto[] }
-  ): Promise<User> {
-    const { addresses, ...userData } = dto;
+  async update(id: number, dto: UpdateUserDto) {
+    const updateData: any = {
+      name:  dto.name,
+      phone: dto.phone,
+      role:  dto.role,
+    };
+    if (dto.password) {
+      updateData.password = await bcrypt.hash(dto.password, 10);
+    }
     return this.prisma.user.update({
       where: { id },
-      data: {
-        ...userData,
-        addresses: addresses?.length
-          ? {
-              create: addresses.map((a) => ({
-                type:          a.type,
-                name:          a.name,
-                addressLine1:  a.addressLine1,
-                buildingName:  a.buildingName,
-                addressLine2:  a.addressLine2,
-                flatNo:        a.flatNo,
-                city:          a.city,
-                state:         a.state,
-                phone:         a.phone,
-                pinCode:       a.pinCode,
-              })),
-            }
-          : undefined,
-      },
+      data:  updateData,
     });
   }
 
-  remove(id: number) {
+  async remove(id: number) {
+    await this.findOne(id);
     return this.prisma.user.delete({ where: { id } });
+  }
+
+  async findByEmail(email: string) {
+    return this.prisma.user.findUnique({ where: { email } });
   }
 }

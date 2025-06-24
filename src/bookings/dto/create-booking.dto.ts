@@ -27,11 +27,11 @@ export class CreateBookingDto {
 
   @IsString()
   @IsNotEmpty()
-  pickupAddress: string;
+  pickupAddressId: string;
 
   @IsString()
   @IsNotEmpty()
-  dropAddress: string;
+  dropAddressId: string;
 
   @IsDateString()
   @IsNotEmpty()

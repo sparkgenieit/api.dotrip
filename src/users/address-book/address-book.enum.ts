@@ -4,4 +4,6 @@ export enum AddressType {
   HOME   = 'HOME',
   OFFICE = 'OFFICE',
   OTHER  = 'OTHER',
+  PICKUP='PICKUP',
+  DROP='DROP'
 }

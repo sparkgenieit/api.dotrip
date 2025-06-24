@@ -17,6 +17,16 @@ export class AddressBookService {
     });
   }
 
+    /**
+   * [NEW] Get one address-book entry by its ID
+   */
+  async findOne(id: number) {
+    const address = await this.prisma.addressBook.findUnique({
+      where: { id },
+    });
+    return address;
+  }
+
   update(id: number, dto: UpdateAddressBookDto) {
     return this.prisma.addressBook.update({ where: { id }, data: dto });
   }

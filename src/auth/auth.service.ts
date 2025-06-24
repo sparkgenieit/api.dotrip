@@ -1,91 +1,58 @@
+// src/auth/auth.service.ts
 
-import { Injectable } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
-import { JwtService } from '@nestjs/jwt';
-import { jwtConstants } from './constants';
-import { Response } from 'express';
-import * as bcrypt from 'bcryptjs';
-import { JWT_ACCESS_COOKIE, JWT_REFRESH_COOKIE } from '../common/constants';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService }                        from '@nestjs/jwt';
+import { PrismaService }                    from '../prisma/prisma.service';
+import * as bcrypt                           from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
+    private prisma: PrismaService,
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, pass: string) {
-    let user;
-    try {
-      user = await this.usersService.findByEmail(email);
-    } catch {
-      return null;
+  /**
+   * Validate the user's credentials.
+   * Throws UnauthorizedException if invalid.
+   * Returns the user record if valid.
+   */
+  async validateUser(email: string, password: string) {
+    // 1) lookup by email
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, password: true, role: true, vendorId: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
     }
-    const isMatch = await bcrypt.compare(pass, user.password);
-    if (!isMatch) {
-      return null;
+
+    // 2) compare hashed passwords
+    const passwordMatches = await bcrypt.compare(password, user.password);
+    if (!passwordMatches) {
+      throw new UnauthorizedException('Invalid credentials');
     }
-    const { password, ...safeUser } = user;
-    return safeUser;
+
+    // 3) return user info (sans password)
+    const { password: _, ...rest } = user;
+    return rest;
   }
 
-  async login(user: any, response: Response) {
-    const payload = { sub: user.id, email: user.email };
-    const accessToken = this.jwtService.sign(payload, { secret: jwtConstants.secret });
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: jwtConstants.refreshSecret,
-      expiresIn: '7d',
-    });
-
-    response.cookie(JWT_ACCESS_COOKIE, accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-      maxAge: 15 * 60 * 1000,
-    });
-
-    response.cookie(JWT_REFRESH_COOKIE, refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/auth/refresh',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    return { accessToken };
-  }
-
-  async refresh(user: any, response: Response) {
-    const payload = { sub: user.sub, email: user.email };
-    const accessToken = this.jwtService.sign(payload, { secret: jwtConstants.secret });
-
-    response.cookie(JWT_ACCESS_COOKIE, accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-      maxAge: 15 * 60 * 1000,
-    });
-
-    return { accessToken };
-  }
-
-  async logout(response: Response) {
-    response.clearCookie(JWT_ACCESS_COOKIE, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-    });
-
-    response.clearCookie(JWT_REFRESH_COOKIE, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/auth/refresh',
-    });
-
-    return { message: 'Logged out' };
+  /**
+   * Issue a JWT for the validated user.
+   */
+  async login(user: { id: number; email: string; role: string; vendorId?: number }) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      vendorId: user.vendorId,
+    };
+    return {
+      access_token: this.jwtService.sign(payload,{
+  expiresIn: '7d', // Change this to a longer duration like '1h', '12h', '7d'
+}),
+    };
   }
 }

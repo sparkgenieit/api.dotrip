@@ -1,16 +1,26 @@
-import { IsInt, IsEnum, IsString, IsNotEmpty, IsOptional, Length } from 'class-validator';
+import { IsInt, IsEnum, IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { AddressType } from '../address-book.enum';
 
 export class CreateAddressBookDto {
-  @IsInt() userId: number;
-  @IsEnum(AddressType) type: AddressType;
-  @IsString() @IsNotEmpty() name: string;
-  @IsString() @IsNotEmpty() addressLine1: string;
-  @IsString() @IsNotEmpty() buildingName: string;
+  @IsInt()
+  userId: number;
+
+  @IsEnum(AddressType)
+  type: AddressType;
+
+  // single “address” field—required
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
+  // make all the other fields optional
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() addressLine1?: string;
+  @IsOptional() @IsString() buildingName?: string;
   @IsOptional() @IsString() addressLine2?: string;
   @IsOptional() @IsString() flatNo?: string;
-  @IsString() @IsNotEmpty() city: string;
-  @IsString() @IsNotEmpty() state: string;
-  @IsString() @Length(10,15) phone: string;
-  @IsString() @Length(4,10) pinCode: string;
+  @IsOptional() @IsString() city?: string;
+  @IsOptional() @IsString() state?: string;
+  @IsOptional() @IsString() phone?: string;
+  @IsOptional() @IsString() pinCode?: string;
 }

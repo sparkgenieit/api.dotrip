@@ -1,31 +1,29 @@
-import { Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
+// src/auth/auth.controller.ts
+
+import {
+  Controller,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './local.guard';
-import { JwtRefreshGuard } from './jwt-refresh.guard';
-import { Public } from '../common/decorators/public.decorator';
-import { Request, Response } from 'express';
+import { LocalAuthGuard } from './local-auth.guard';
+import { Public } from './public.decorator';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private auth: AuthService) {}
 
   @Public()
-  @Post('login')
   @UseGuards(LocalAuthGuard)
-  async login(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    return this.authService.login(req.user, res);
-  }
-
-  @Public()
-  @Post('refresh')
-  @UseGuards(JwtRefreshGuard)
-  async refresh(@Req() req: any, @Res({ passthrough: true }) res: Response) {
-    return this.authService.refresh(req.user, res);
-  }
-
-  @Public()
-  @Post('logout')
-  async logout(@Res({ passthrough: true }) res: Response) {
-    return this.authService.logout(res);
+  @Post('login')
+  async login(
+    @Req() req: Request & { user: any }
+  ) {
+    // simply return whatever login() returns
+ const result = await this.auth.login(req.user);
+  console.log('✅ Login Response:', result);
+  return result;
   }
 }

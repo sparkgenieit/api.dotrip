@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "start": "nest start",
-    "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "start:dev": "nest start --watch",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\""
   },
@@ -38,9 +38,14 @@
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
+    "@types/cookie-parser": "^1.4.8",
     "prettier": "^3.0.0",
     "prisma": "^5.0.0",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.1.6"
+  },
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   }
 }

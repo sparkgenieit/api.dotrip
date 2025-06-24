@@ -1,3 +1,5 @@
+// src/app.module.ts
+
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
@@ -6,12 +8,13 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AddressBookModule } from './users/address-book/address-book.module';
 
-
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { CitiesModule } from './cities/cities.module';
 import { TripTypesModule } from './trip-types/trip-types.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { PlacesModule } from './places/places.module';
+
+import { AdminModule } from './admin/admin.module';  // ← replace AdminVendorModule
 
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
@@ -21,12 +24,13 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     PrismaModule,
     AuthModule,
     UsersModule,
+    AddressBookModule,
     VehiclesModule,
     CitiesModule,
     TripTypesModule,
     BookingsModule,
     PlacesModule,
-    AddressBookModule
+    AdminModule,   // now handles all /admin/* routes: drivers + vehicles
   ],
   providers: [
     {
