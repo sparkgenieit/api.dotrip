@@ -1,9 +1,7 @@
-import { IsInt, IsString } from 'class-validator';
+import { IsString, IsInt, IsOptional, IsDateString } from 'class-validator';
 
 export class CreateVehicleDto {
   @IsString()
-  registrationNumber: string;
- @IsString()
   name: string;
 
   @IsString()
@@ -20,4 +18,26 @@ export class CreateVehicleDto {
 
   @IsInt()
   originalPrice: number;
+
+  @IsString()
+  registrationNumber: string;
+
+  @IsInt()
+  vehicleTypeId: number;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @IsInt()
+  comfortLevel?: number;
+
+  @IsOptional()
+  @IsDateString()
+  lastServicedDate?: string;
+
+  @IsOptional()
+  @IsInt()
+  vendorId?: number;
 }

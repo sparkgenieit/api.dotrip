@@ -8,32 +8,27 @@ export class VehiclesService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(filters: { vendorId?: number }) {
-  return this.prisma.vehicle.findMany({
-    where: {
-      ...(filters.vendorId && {
-        vendor: {
-          id: filters.vendorId,
-          role: 'VENDOR',
-        },
-      }),
-    },
-    include: {
-      vendor: true,
-      driver: true,
-    },
-  });
-}
-
+    return this.prisma.vehicle.findMany({
+      where: filters.vendorId ? { vendorId: filters.vendorId } : undefined,
+      include: {
+        vendor: true, // ✅ this is valid if `vendor` is defined in `Vehicle` model
+        driver: true,
+      },
+    });
+  }
 
   async findOne(id: number) {
-    const v = await this.prisma.vehicle.findUnique({ where: { id } });
+    const v = await this.prisma.vehicle.findUnique({
+      where: { id },
+      include: { vendor: true, driver: true }, // optional but useful
+    });
     if (!v) throw new NotFoundException(`Vehicle #${id} not found`);
     return v;
   }
 
   async create(
     dto: CreateVehicleDto,
-    current: { userId?:number, role: string; vendorId?: number; driverId?: number },
+    current: { userId?: number; role: string; vendorId?: number; driverId?: number },
   ) {
     const data: any = {
       name: dto.name,
@@ -43,32 +38,27 @@ export class VehiclesService {
       price: dto.price,
       originalPrice: dto.originalPrice,
       registrationNumber: dto.registrationNumber,
+      vehicleTypeId: dto.vehicleTypeId,
     };
-console.log(current);
-    if (current.role === 'VENDOR') {
+
+    // ✅ Connect vendor via vendorId
+    if (current.role === 'VENDOR' && current.userId) {
       data.vendor = { connect: { id: current.userId } };
-    } 
-console.log(data);
-    /*if (current.role === 'DRIVER') {
-      data.driver = { connect: { id: current.driverId } };
-    } else if (dto.driverId !== undefined) {
-      data.driver = { connect: { id: dto.driverId } };
+    } else if (dto.vendorId) {
+      data.vendor = { connect: { id: dto.vendorId } };
     }
-    // Do not set driver connection during vehicle creation at all
-    // Since driverId will always be null
-    */
+
+    // ❌ Skipping driver assignment at creation time unless explicitly needed
+
     return this.prisma.vehicle.create({ data });
   }
 
   async update(id: number, dto: UpdateVehicleDto) {
-    const {
-      vendorId,
-      driverId,
-      ...rest
-    } = dto;
+    const { vendorId, driverId, ...rest } = dto;
 
-    const data: any = { ...rest }; console.log('data',id,data);
-/*
+    const data: any = { ...rest };
+
+    // Optional: Handle vendor reassignment
     if (vendorId !== undefined) {
       data.vendor = vendorId ? { connect: { id: vendorId } } : { disconnect: true };
     }
@@ -76,7 +66,6 @@ console.log(data);
     if (driverId !== undefined) {
       data.driver = driverId ? { connect: { id: driverId } } : { disconnect: true };
     }
-      */
 
     return this.prisma.vehicle.update({ where: { id }, data });
   }

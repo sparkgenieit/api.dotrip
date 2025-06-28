@@ -7,9 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { VendorService }    from './vendor.service';
 import { VendorController } from './vendor.controller';
 
-// Vehicle management under vendor
-import { VehiclesService }    from './vehicles.service';
-import { VehiclesController } from './vehicles.controller';
+
 
 // Trip management
 import { TripsService }    from './trips.service';
@@ -23,13 +21,13 @@ import { EarningsController } from './earnings.controller';
   imports: [],
   controllers: [
     VendorController,
-    VehiclesController,
+   
     TripsController,
     EarningsController,
   ],
   providers: [
     VendorService,
-    VehiclesService,
+  
     TripsService,
     EarningsService,
     PrismaService,

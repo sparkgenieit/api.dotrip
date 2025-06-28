@@ -31,206 +31,197 @@ enum AddressType {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// USER & RELATED
+// MODELS
 // ───────────────────────────────────────────────────────────────────────────────
+
 model User {
-  id           Int             @id @default(autoincrement())
-  name         String
-  email        String          @unique
-  password     String
-  phone        String?
-  role         Role            @default(RIDER)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?
+  role      Role     @default(RIDER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  vendorId  Int?
 
-  addressBooks AddressBook[]    @relation("UserAddressBooks")
-  bookings     Booking[]        @relation("UserBookings")
-  tickets      SupportTicket[]  @relation("UserTickets")
-  vendor       Vendor?          @relation("VendorUsers", fields: [vendorId], references: [id])
-  vendorId     Int?
-  ownedVendor  Vendor?          @relation("UserOwnsVendor")
-  Driver       Driver?          @relation("UserDriver")
-  Trip         Trip[]           @relation("UserTrips")
+  bookings     Booking[]     @relation("UserBookings")
+  trips        Trip[]        @relation("UserTrips")
+  addressBooks AddressBook[] @relation("UserAddressBooks")
 
-  vehiclesAsVendor Vehicle[] @relation("VehicleVendor")
-  vehiclesAsDriver Vehicle[] @relation("VehicleDriver")
-
-  @@map("users")
+  vendor     Vendor?  @relation("VendorUsers", fields: [vendorId], references: [id])
+  ownsVendor Vendor?  @relation("UserOwnsVendor")
+  Driver     Driver[]
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// ADDRESS BOOK
-// ───────────────────────────────────────────────────────────────────────────────
-model AddressBook {
-  id           Int         @id @default(autoincrement())
-  userId       Int
-  type         AddressType
-  address   String? 
-  addressLine1 String?
-  buildingName String?
-  addressLine2 String?
-  flatNo       String?
-  city         String?
-  state        String?
-  phone        String?
-  pinCode      String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @default(now())
+model Vendor {
+  id         Int      @id @default(autoincrement())
+  name       String
+  companyReg String   @unique
+  createdAt  DateTime @default(now())
 
-  user User @relation("UserAddressBooks", fields: [userId], references: [id])
+  vendorId Int  @unique
+  vendor   User @relation("UserOwnsVendor", fields: [vendorId], references: [id])
 
-  @@map("address_books")
+  users    User[]     @relation("VendorUsers")
+  drivers  Driver[]   @relation("VendorDrivers")
+  vehicles Vehicle[] // ✅ Add this to support vehicle.vendorId
+  trips    Trip[]     @relation("VendorTrips")
+  earnings Earnings[] @relation("VendorEarnings")
+
+  @@map("vendors")
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// VEHICLES & BOOKINGS
-// ───────────────────────────────────────────────────────────────────────────────
 model Vehicle {
-  id            Int       @id @default(autoincrement())
-  name          String
-  model         String
-  image         String
-  capacity      Int
-  price         Int       @default(0)
-  originalPrice Int       @default(0)
-  registrationNumber String    @unique @default("")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now())
-
-  vendor   User?  @relation("VehicleVendor", fields: [vendorId], references: [id])
-  vendorId Int?
-
-  driver   User?  @relation("VehicleDriver", fields: [driverId], references: [id])
-  driverId Int?   @unique
-
-  bookings Booking[] @relation("VehicleBookings")
-  trips    Trip[]    @relation("VehicleTrips")
-
-  @@map("vehicles")
+  id                 Int         @id @default(autoincrement())
+  name               String
+  model              String
+  image              String
+  capacity           Int
+  registrationNumber String      @unique
+  price              Int         @default(0)
+  originalPrice      Int         @default(0)
+  status             String      @default("available")
+  comfortLevel       Int
+  lastServicedDate   DateTime?
+  vehicleTypeId      Int
+  vehicleType        VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  driver             Driver?
+  trips              Trip[]      @relation("VehicleTrips")
+  vendor             Vendor?     @relation(fields: [vendorId], references: [id])
+  vendorId           Int?
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// REMAINING MODELS
-// ───────────────────────────────────────────────────────────────────────────────
+
+model Driver {
+  id        Int      @id @default(autoincrement())
+  name      String
+  license   String
+  userId    Int
+  vendorId  Int
+  vehicleId Int?     @unique
+  createdAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id])
+  vendor  Vendor   @relation("VendorDrivers", fields: [vendorId], references: [id])
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+  trips   Trip[] // ✅ Add this for Trip relation
+}
+
+model VehicleType {
+  id                Int                @id @default(autoincrement())
+  name              String             @unique
+  vehicles          Vehicle[]
+  bookings          Booking[]
+  corporateBookings CorporateBooking[]
+}
 
 model City {
   id           Int       @id @default(autoincrement())
   name         String
   state        String
-  fromBookings Booking[] @relation("BookingFromCity")
-  toBookings   Booking[] @relation("BookingToCity")
-
-  @@map("cities")
+  bookingsFrom Booking[] @relation("BookingFromCity")
+  bookingsTo   Booking[] @relation("BookingToCity")
 }
 
 model TripType {
   id       Int       @id @default(autoincrement())
   label    String    @unique
-  bookings Booking[] @relation("TripTypeBookings")
+  bookings Booking[]
+}
 
-  @@map("trip_types")
+model AddressBook {
+  id             Int         @id @default(autoincrement())
+  userId         Int
+  type           AddressType
+  address        String?
+  city           String?
+  pinCode        String?
+  createdAt      DateTime    @default(now())
+  user           User        @relation("UserAddressBooks", fields: [userId], references: [id])
+  pickupBookings Booking[]   @relation("BookingPickupAddress")
+  dropBookings   Booking[]   @relation("BookingDropAddress")
 }
 
 model Booking {
-  id             Int      @id @default(autoincrement())
-  user           User     @relation("UserBookings",     fields: [userId],     references: [id])
-  userId         Int
-  vehicle        Vehicle  @relation("VehicleBookings",  fields: [vehicleId],  references: [id])
-  vehicleId      Int
-  fromCity       City     @relation("BookingFromCity",  fields: [fromCityId], references: [id])
-  fromCityId     Int
-  toCity         City     @relation("BookingToCity",    fields: [toCityId],   references: [id])
-  toCityId       Int
-  pickupAddressId  String
-  dropAddressId    String
-  pickupDateTime DateTime
-  tripType       TripType @relation("TripTypeBookings", fields: [tripTypeId], references: [id])
-  tripTypeId     Int
-  fare           Float
-  createdAt      DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  vehicleTypeId   Int
+  pickupAddressId Int
+  dropAddressId   Int
+  pickupDateTime  DateTime
+  fromCityId      Int
+  toCityId        Int
+  tripTypeId      Int
+  fare            Float
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now())
 
-  @@map("bookings")
+  user          User        @relation("UserBookings", fields: [userId], references: [id])
+  vehicleType   VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  pickupAddress AddressBook @relation("BookingPickupAddress", fields: [pickupAddressId], references: [id])
+  dropAddress   AddressBook @relation("BookingDropAddress", fields: [dropAddressId], references: [id])
+  fromCity      City        @relation("BookingFromCity", fields: [fromCityId], references: [id])
+  toCity        City        @relation("BookingToCity", fields: [toCityId], references: [id])
+  trip          Trip?       @relation("BookingTrip")
+  TripType      TripType    @relation(fields: [tripTypeId], references: [id])
 }
 
-model Vendor {
-  id         Int       @id @default(autoincrement())
-  name       String
-  companyReg String
-  createdAt  DateTime  @default(now())
+model CorporateBooking {
+  id                  Int         @id @default(autoincrement())
+  vehicleTypeId       Int
+  vehicleType         VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  vehicleModel        String?
+  companyName         String
+  contactPerson       String
+  contactEmail        String
+  contactPhone        String
+  pickupLocation      String
+  dropoffLocation     String
+  startDate           DateTime
+  endDate             DateTime
+  bookingType         String
+  numberOfVehicles    String
+  estimatedPassengers String
+  specialRequirements String?
+  budgetRange         String?
+  notes               String?
+  createdAt           DateTime    @default(now())
 
-  vendorId   Int       @unique
-  vendor     User      @relation("UserOwnsVendor", fields: [vendorId], references: [id])
-
-  users      User[]     @relation("VendorUsers")
-  drivers    Driver[]   @relation("VendorDrivers")
-  trips      Trip[]     @relation("VendorTrips")
-  earnings   Earnings[] @relation("VendorEarnings")
-
-  @@map("vendors")
-}
-
-model Driver {
-  id        Int       @id @default(autoincrement())
-  name      String
-  license   String
-  createdAt DateTime  @default(now())
-
-  user      User      @relation("UserDriver",    fields: [userId],    references: [id])
-  userId    Int       @unique
-
-
-  vendor    Vendor?   @relation("VendorDrivers", fields: [vendorId], references: [id])
-  vendorId  Int?
-
-  trips    Trip[]     @relation("DriverTrips")
-  earnings Earnings[] @relation("DriverEarnings")
-
-  @@map("drivers")
+  trips Trip[] @relation("CorporateBookingTrips")
 }
 
 model Trip {
-  id        Int       @id @default(autoincrement())
-  startTime DateTime
-  endTime   DateTime?
-  status    String
-  distance  Float?
-  fare      Float?
-  createdAt DateTime  @default(now())
+  id                 Int       @id @default(autoincrement())
+  bookingId          Int       @unique
+  riderId            Int
+  driverId           Int
+  vehicleId          Int
+  vendorId           Int
+  corporateBookingId Int?
+  startTime          DateTime
+  endTime            DateTime?
+  status             String    @default("ONGOING")
+  distance           Float?
+  fare               Float?
+  breakdownReported  Boolean   @default(false)
+  breakdownNotes     String?
+  createdAt          DateTime  @default(now())
 
-  rider     User     @relation("UserTrips",    fields: [riderId],   references: [id])
-  riderId   Int
-  driver    Driver?  @relation("DriverTrips",   fields: [driverId],  references: [id])
-  driverId  Int?
-  vehicle   Vehicle? @relation("VehicleTrips",  fields: [vehicleId], references: [id])
-  vehicleId Int?
-  vendor    Vendor?  @relation("VendorTrips",   fields: [vendorId],  references: [id])
-  vendorId  Int?
-
-  @@map("trips")
-}
-
-model SupportTicket {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  status      String   @default("OPEN")
-  createdAt   DateTime @default(now())
-
-  user   User @relation("UserTickets", fields: [userId], references: [id])
-  userId Int
-
-  @@map("support_tickets")
+  booking          Booking           @relation("BookingTrip", fields: [bookingId], references: [id])
+  rider            User              @relation("UserTrips", fields: [riderId], references: [id])
+  driver           Driver            @relation(fields: [driverId], references: [id])
+  vehicle          Vehicle           @relation("VehicleTrips", fields: [vehicleId], references: [id])
+  vendor           Vendor            @relation("VendorTrips", fields: [vendorId], references: [id])
+  corporateBooking CorporateBooking? @relation("CorporateBookingTrips", fields: [corporateBookingId], references: [id])
 }
 
 model Earnings {
   id        Int      @id @default(autoincrement())
+  vendorId  Int
   amount    Float
-  date      DateTime @default(now())
+  note      String?
+  createdAt DateTime @default(now())
 
-  driver    Driver?  @relation("DriverEarnings", fields: [driverId], references: [id])
-  driverId  Int?
-  vendor    Vendor?  @relation("VendorEarnings", fields: [vendorId], references: [id])
-  vendorId  Int?
-
-  @@map("earnings")
+  vendor Vendor @relation("VendorEarnings", fields: [vendorId], references: [id])
 }

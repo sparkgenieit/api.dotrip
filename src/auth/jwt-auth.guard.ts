@@ -1,3 +1,4 @@
+// src/auth/jwt-auth.guard.ts
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
@@ -20,3 +21,5 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 }
+
+export default JwtAuthGuard; // ✅ Ensures it works in `app.module.ts` or wherever imported

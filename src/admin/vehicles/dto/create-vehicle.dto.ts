@@ -12,4 +12,7 @@ export class CreateVehicleDto {
   registrationNumber: string; // 
   @IsOptional() @IsNumber() vendorId?: number;
   @IsOptional() @IsNumber() driverId?: number;
+  @IsNumber()
+  @IsNotEmpty()
+  vehicleTypeId: number; // ✅ ADD THIS LINE
 }
