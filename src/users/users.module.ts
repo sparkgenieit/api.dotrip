@@ -2,12 +2,12 @@ import { Module, forwardRef } from '@nestjs/common';
 import { UsersService }      from './users.service';
 import { UsersController }   from './users.controller';
 import { PrismaModule }      from '../prisma/prisma.module';
-import { BookingsModule }    from '../bookings/bookings.module';
+import { BookingModule }    from '../bookings/booking.module';
 
 @Module({
   imports: [
     PrismaModule,
-    forwardRef(() => BookingsModule),
+    forwardRef(() => BookingModule),
   ],
   providers: [UsersService],
   controllers: [UsersController],

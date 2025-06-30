@@ -1,34 +1,33 @@
-
-import { IsInt, IsDateString, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsDateString, IsEnum } from 'class-validator';
 
 export class CreateBookingDto {
-  @IsInt()
+  @IsNumber()
   userId: number;
 
-  @IsInt()
+  @IsNumber()
   vehicleTypeId: number;
 
-  @IsInt()
+  @IsNumber()
   pickupAddressId: number;
 
-  @IsInt()
+  @IsNumber()
   dropAddressId: number;
-
-  @IsInt()
-  fromCityId: number;
-
-  @IsInt()
-  toCityId: number;
 
   @IsDateString()
   pickupDateTime: string;
 
-  @IsInt()
+  @IsNumber()
+  fromCityId: number;
+
+  @IsNumber()
+  toCityId: number;
+
+  @IsNumber()
   tripTypeId: number;
 
   @IsNumber()
   fare: number;
 
-  @IsString()
+  @IsNotEmpty()
   status: string;
 }

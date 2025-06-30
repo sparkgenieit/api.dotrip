@@ -65,7 +65,7 @@ model Vendor {
 
   users    User[]     @relation("VendorUsers")
   drivers  Driver[]   @relation("VendorDrivers")
-  vehicles Vehicle[] // ✅ Add this to support vehicle.vendorId
+  vehicles Vehicle[]
   trips    Trip[]     @relation("VendorTrips")
   earnings Earnings[] @relation("VendorEarnings")
 
@@ -92,7 +92,6 @@ model Vehicle {
   vendorId           Int?
 }
 
-
 model Driver {
   id        Int      @id @default(autoincrement())
   name      String
@@ -105,7 +104,7 @@ model Driver {
   user    User     @relation(fields: [userId], references: [id])
   vendor  Vendor   @relation("VendorDrivers", fields: [vendorId], references: [id])
   vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
-  trips   Trip[] // ✅ Add this for Trip relation
+  trips   Trip[]
 }
 
 model VehicleType {

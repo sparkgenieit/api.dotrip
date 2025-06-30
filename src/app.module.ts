@@ -11,7 +11,7 @@ import { AddressBookModule } from './users/address-book/address-book.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { CitiesModule } from './cities/cities.module';
 import { TripTypesModule } from './trip-types/trip-types.module';
-import { BookingsModule } from './bookings/bookings.module';
+import { BookingModule } from './bookings/booking.module';
 import { PlacesModule } from './places/places.module';
 
 import { AdminModule } from './admin/admin.module';  // ← replace AdminVendorModule
@@ -28,7 +28,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     VehiclesModule,
     CitiesModule,
     TripTypesModule,
-    BookingsModule,
+    BookingModule,
     PlacesModule,
     AdminModule,   // now handles all /admin/* routes: drivers + vehicles
   ],

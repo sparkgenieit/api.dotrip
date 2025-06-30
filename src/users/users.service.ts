@@ -64,7 +64,19 @@ export class UsersService {
     return this.prisma.user.delete({ where: { id } });
   }
 
-  async findByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email } });
-  }
+async findByEmailWithAddresses(email: string) {
+  return this.prisma.user.findUnique({
+    where: { email },
+    include: {
+      addressBooks: {
+        where: {
+          type: {
+            in: ['PICKUP', 'DROP'],
+          },
+        },
+      },
+    },
+  });
+}
+
 }

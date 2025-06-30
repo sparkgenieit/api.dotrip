@@ -43,13 +43,19 @@ export class UsersController {
   // users.controller.ts
 @Post('check-email')
 async checkEmail(@Body('email') email: string) {
-  const user = await this.usersService.findByEmail(email);
-  // If no user, return `{ exists: false }`. If user, return `{ exists: true, user }`.
-  if (user) {
-    return { exists: true, user };
-  } else {
-    return { exists: false };
-  }
+  const user = await this.usersService.findByEmailWithAddresses(email);
+  if (!user) return { exists: false };
+
+  return {
+    exists: true,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    },
+    addresses: user.addressBooks,
+  };
 }
+
 
 }

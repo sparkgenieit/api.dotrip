@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { BookingsService }    from './bookings.service';
-import { BookingsController } from './bookings.controller';
+import { BookingService }    from './booking.service';
+import { BookingController } from './booking.controller';
 import { PrismaModule }      from '../prisma/prisma.module';
 import { UsersModule }       from '../users/users.module';
 
@@ -9,8 +9,8 @@ import { UsersModule }       from '../users/users.module';
     PrismaModule,
     forwardRef(() => UsersModule),
   ],
-  providers: [BookingsService],
-  controllers: [BookingsController],
-  exports: [BookingsService],
+  providers: [BookingService],
+  controllers: [BookingController],
+  exports: [BookingService],
 })
-export class BookingsModule {}
+export class BookingModule {}
