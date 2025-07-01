@@ -1,44 +1,27 @@
-
-import { IsString, IsDateString, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateCorporateBookingDto {
+  @IsNotEmpty()
   @IsString()
   companyName: string;
-  vehicleTypeId: number; // not `vehicleType: string`
 
+  @IsNotEmpty()
   @IsString()
   contactPerson: string;
 
+  @IsNotEmpty()
   @IsString()
   contactEmail: string;
 
+  @IsNotEmpty()
   @IsString()
   contactPhone: string;
 
-  @IsString()
-  pickupLocation: string;
-
-  @IsString()
-  dropoffLocation: string;
-
-  @IsDateString()
-  startDate: string;
-
-  @IsDateString()
-  endDate: string;
-
-  @IsString()
-  bookingType: string;
-
+  @IsNotEmpty()
   @IsString()
   numberOfVehicles: string;
 
-  @IsString()
-  vehicleType: string;
-
-  @IsString()
-  vehicleModel: string;
-
+  @IsNotEmpty()
   @IsString()
   estimatedPassengers: string;
 
@@ -53,4 +36,7 @@ export class CreateCorporateBookingDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsNotEmpty()
+  bookingId: number;
 }

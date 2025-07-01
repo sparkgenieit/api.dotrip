@@ -2,6 +2,7 @@ import {
   Controller, Get, Post, Body, Patch, Param, Delete, UseGuards
 } from '@nestjs/common';
 import { BookingService } from './booking.service';
+import { CreateBookingPublicDto } from './dto/create-booking-public.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -11,10 +12,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
-  @Post()
-  create(@Body() createBookingDto: CreateBookingDto) {
-    return this.bookingService.create(createBookingDto);
-  }
+ @Post()
+create(@Body() body: CreateBookingPublicDto) {
+  return this.bookingService.create(body);
+}
 
   @Get()
   findAll() {

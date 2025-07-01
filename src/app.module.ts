@@ -12,7 +12,10 @@ import { VehiclesModule } from './vehicles/vehicles.module';
 import { CitiesModule } from './cities/cities.module';
 import { TripTypesModule } from './trip-types/trip-types.module';
 import { BookingModule } from './bookings/booking.module';
+import { CorporateBookingModule } from './corporate-bookings/corporate-booking.module';
+
 import { PlacesModule } from './places/places.module';
+import { VehicleTypesModule } from './vehicle-types/vehicle-types.module';
 
 import { AdminModule } from './admin/admin.module';  // ← replace AdminVendorModule
 
@@ -31,6 +34,8 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     BookingModule,
     PlacesModule,
     AdminModule,   // now handles all /admin/* routes: drivers + vehicles
+    VehicleTypesModule,
+    CorporateBookingModule
   ],
   providers: [
     {
