@@ -18,13 +18,18 @@ export class VehiclesService {
   }
 
   async findOne(id: number) {
-    const vehicle = await this.prisma.vehicle.findUnique({
-      where: { id },
-      include: { vendor: true, driver: true },
-    });
-    if (!vehicle) throw new NotFoundException(`Vehicle #${id} not found`);
-    return vehicle;
-  }
+  const vehicle = await this.prisma.vehicle.findUnique({
+    where: { id },
+    include: {
+      vendor: true,
+      driver: true,
+      vehicleType: true, // ✅ Include vehicleType for prefill
+    },
+  });
+  if (!vehicle) throw new NotFoundException(`Vehicle #${id} not found`);
+  return vehicle;
+}
+
 
   async create(
     dto: CreateVehicleDto,

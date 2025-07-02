@@ -1,17 +1,37 @@
-import { IsNotEmpty, IsOptional, IsString, IsNumber } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsEmail,
+  IsDateString,
+} from 'class-validator';
 
 export class CreateDriverDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  fullName: string;
 
   @IsString()
   @IsNotEmpty()
-  license: string;
+  licenseNumber: string;
+
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
+
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsDateString()
+  @IsNotEmpty()
+  licenseExpiry: string; // Use ISO string format on frontend (e.g., "2025-12-31T00:00:00.000Z")
 
   @IsNumber()
   userId: number;
-
+ 
+  @IsOptional()
   @IsNumber()
   vendorId: number;
 

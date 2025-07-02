@@ -1,8 +1,7 @@
-// src/app.module.ts
-
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -16,8 +15,9 @@ import { CorporateBookingModule } from './corporate-bookings/corporate-booking.m
 
 import { PlacesModule } from './places/places.module';
 import { VehicleTypesModule } from './vehicle-types/vehicle-types.module';
+import { AdminModule } from './admin/admin.module';
 
-import { AdminModule } from './admin/admin.module';  // ← replace AdminVendorModule
+import { DriverModule } from './drivers/driver.module'; // ✅ Import Driver Module
 
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
@@ -33,9 +33,10 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     TripTypesModule,
     BookingModule,
     PlacesModule,
-    AdminModule,   // now handles all /admin/* routes: drivers + vehicles
+    AdminModule,
     VehicleTypesModule,
-    CorporateBookingModule
+    CorporateBookingModule,
+    DriverModule, // ✅ Register Driver Module here
   ],
   providers: [
     {
