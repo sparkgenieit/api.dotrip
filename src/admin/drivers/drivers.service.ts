@@ -7,36 +7,95 @@ import { UpdateDriverDto } from './dto/update-driver.dto';
 export class DriversService {
   constructor(private readonly prisma: PrismaService) {}
 
-create(dto: CreateDriverDto) {
-  const { vehicleId, ...rest } = dto;
+  async create(dto: CreateDriverDto) {
+  const {
+    fullName,
+    licenseNumber,
+    licenseExpiry,
+    phone,
+    email,
+    userId,
+    vendorId,
+    vehicleId,
+  } = dto;
+
   return this.prisma.driver.create({
     data: {
-      ...rest,
-      vehicleId: vehicleId ?? undefined,
+      fullName,
+      licenseNumber,
+      licenseExpiry: new Date(licenseExpiry),
+      phone,
+      email,
+      user: {
+        connect: { id: userId },
+      },
+      ...(typeof vendorId === 'number' && {
+        vendor: {
+          connect: { id: vendorId },
+        },
+      }),
+      ...(typeof vehicleId === 'number' && {
+        assignedVehicle: {
+          connect: { id: vehicleId },
+        },
+      }),
     },
   });
 }
 
   findAll() {
-    return this.prisma.driver.findMany();
+    return this.prisma.driver.findMany({
+      include: {
+        vendor: true,
+        assignedVehicle: true,
+        user: true,
+      },
+    });
   }
 
   findOne(id: string) {
     return this.prisma.driver.findUnique({
       where: { id: parseInt(id) },
+      include: {
+        vendor: true,
+        assignedVehicle: true,
+        user: true,
+      },
     });
   }
 
-update(id: string, dto: UpdateDriverDto) {
-  const { vehicleId, ...rest } = dto;
-  return this.prisma.driver.update({
-    where: { id: parseInt(id) },
-    data: {
-      ...rest,
-      vehicleId: vehicleId ?? undefined,
-    },
-  });
-}
+  async update(id: string, dto: UpdateDriverDto) {
+    const {
+      fullName,
+      licenseNumber,
+      phone,
+      email,
+      userId,
+      vendorId,
+      vehicleId,
+    } = dto;
+
+    return this.prisma.driver.update({
+      where: { id: parseInt(id) },
+      data: {
+        fullName,
+        licenseNumber,
+        phone,
+        email,
+        user: {
+          connect: { id: userId },
+        },
+        vendor: {
+          connect: { id: vendorId },
+        },
+        ...(vehicleId && {
+          assignedVehicle: {
+            connect: { id: vehicleId },
+          },
+        }),
+      },
+    });
+  }
 
   remove(id: string) {
     return this.prisma.driver.delete({
