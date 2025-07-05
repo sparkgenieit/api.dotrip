@@ -1,11 +1,38 @@
+import { IsString, IsInt, IsOptional, IsBoolean, IsDateString } from 'class-validator';
+
 export class CreateDriverDto {
-  name: string;
+  @IsString()
+  fullName: string;
+
+  @IsString()
   phone: string;
+
+  @IsString()
   email: string;
+
+  @IsString()
   licenseNumber: string;
-  license_expiry: string;
-  is_part_time?: boolean;
-  is_available?: boolean;
-  vendor_id: string;
-  assigned_vehicle_id?: string;
+
+  @IsDateString()
+  licenseExpiry: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPartTime?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isAvailable?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  vendorId?: number;
+
+  @IsOptional()
+  @IsInt()
+  vehicleId?: number;
+
+  @IsOptional()
+  @IsInt()
+  userId?: number;
 }

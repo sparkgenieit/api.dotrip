@@ -8,35 +8,41 @@ export class DriverService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateDriverDto) {
-    return this.prisma.driver.create({
-      data: {
-        fullName: dto.name,
-        phone: dto.phone,
-        email: dto.email,
-        licenseNumber: dto.licenseNumber,
-        licenseExpiry: new Date(dto.license_expiry),
-        isPartTime: dto.is_part_time ?? false,
-        isAvailable: dto.is_available ?? true,
-        vendor: {
-          connect: { id: Number(dto.vendor_id) },
-        },
-        assignedVehicle: dto.assigned_vehicle_id
-          ? {
-              connect: { id: Number(dto.assigned_vehicle_id) },
-            }
-          : undefined,
-        user: {
-          create: {
-            name: dto.name,
-            email: dto.email,
-            password: 'default@123', // You should hash this in production
-            phone: dto.phone,
-            role: 'DRIVER',
-          },
+  return this.prisma.driver.create({
+    data: {
+      fullName: dto.fullName,
+      phone: dto.phone,
+      email: dto.email,
+      licenseNumber: dto.licenseNumber,
+      licenseExpiry: new Date(dto.licenseExpiry),
+      isPartTime: dto.isPartTime ?? false,
+      isAvailable: dto.isAvailable ?? true,
+
+      vendor: dto.vendorId
+        ? {
+            connect: { id: dto.vendorId },
+          }
+        : undefined,
+
+      assignedVehicle: dto.vehicleId
+        ? {
+            connect: { id: dto.vehicleId },
+          }
+        : undefined,
+
+      // ✅ CREATE user instead of connect
+      user: {
+        create: {
+          name: dto.fullName,
+          email: dto.email,
+          phone: dto.phone,
+          password: 'default@123', // TODO: hash before save
+          role: 'DRIVER',
         },
       },
-    });
-  }
+    },
+  });
+}
 
   findAll() {
     return this.prisma.driver.findMany({

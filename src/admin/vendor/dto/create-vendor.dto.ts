@@ -1,5 +1,15 @@
+import { IsNotEmpty, IsString, IsNumber } from 'class-validator';
+
 export class CreateVendorDto {
+  @IsNotEmpty()
+  @IsString()
   name: string;
+
+  @IsNotEmpty()
+  @IsString()
   companyReg: string;
-  vendorId:number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  vendorId: number;
 }

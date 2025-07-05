@@ -51,7 +51,7 @@ model User {
 
   vendor     Vendor?  @relation("VendorUsers", fields: [vendorId], references: [id])
   ownsVendor Vendor?  @relation("UserOwnsVendor")
-  Driver     Driver[]
+  Driver     Driver[] @relation("UserDrivers") // ✅ added relation name
 }
 
 model Vendor {
@@ -92,19 +92,24 @@ model Vehicle {
   vendorId           Int?
 }
 
+// ✅ Updated Prisma Schema for Driver model with new UI fields
 model Driver {
-  id        Int      @id @default(autoincrement())
-  name      String
-  license   String
-  userId    Int
-  vendorId  Int
-  vehicleId Int?     @unique
-  createdAt DateTime @default(now())
+  id                Int      @id @default(autoincrement())
+  fullName          String
+  phone             String
+  email             String
+  licenseNumber     String
+  licenseExpiry     DateTime
+  isPartTime        Boolean  @default(false)
+  isAvailable       Boolean  @default(true)
+  assignedVehicle   Vehicle? @relation(fields: [assignedVehicleId], references: [id])
+  assignedVehicleId Int?     @unique // ✅ fix: unique constraint for 1:1 mapping
+  vendorId Int?
+  vendor   Vendor? @relation("VendorDrivers", fields: [vendorId], references: [id])
+  userId Int // ✅ Add this missing field
+  user   User @relation("UserDrivers", fields: [userId], references: [id]) // ✅ Fixes error
 
-  user    User     @relation(fields: [userId], references: [id])
-  vendor  Vendor   @relation("VendorDrivers", fields: [vendorId], references: [id])
-  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
-  trips   Trip[]
+  trips Trip[]
 }
 
 model VehicleType {
