@@ -28,8 +28,10 @@ export class CreateDriverDto {
   @IsNotEmpty()
   licenseExpiry: string; // Use ISO string format on frontend (e.g., "2025-12-31T00:00:00.000Z")
 
+  @IsOptional()
   @IsNumber()
-  userId: number;
+  userId?: number;
+
  
   @IsOptional()
   @IsNumber()

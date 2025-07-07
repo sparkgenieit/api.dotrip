@@ -42,26 +42,6 @@ async function main() {
 
   await prisma.vehicle.createMany({
     data: [
-      {
-        name: "Innova Crysta",
-        model: "2.4 ZX",
-        image: "https://example.com/innova.jpg",
-        capacity: 7,
-        registrationNumber: "TS123456",
-        price: 1200,
-        originalPrice: 1400,
-        vehicleTypeId: firstVehicleTypeId
-      },
-      {
-        name: "Dzire",
-        model: "VXI",
-        image: "https://example.com/dzire.jpg",
-        capacity: 5,
-        registrationNumber: "TS654321",
-        price: 900,
-        originalPrice: 1100,
-        vehicleTypeId: firstVehicleTypeId
-      }
     ],
     skipDuplicates: true
   });

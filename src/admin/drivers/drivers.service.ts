@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable,BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
@@ -7,18 +7,43 @@ import { UpdateDriverDto } from './dto/update-driver.dto';
 export class DriversService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateDriverDto) {
+// 🔁 REPLACE
+async create(dto: CreateDriverDto) {
   const {
     fullName,
     licenseNumber,
     licenseExpiry,
     phone,
     email,
-    userId,
     vendorId,
     vehicleId,
   } = dto;
 
+  // ✅ Check if user exists or create
+  let user = await this.prisma.user.findUnique({ where: { email } });
+
+  if (!user) {
+    user = await this.prisma.user.create({
+      data: {
+        email,
+        phone,
+        name: fullName,
+        role: 'DRIVER', // ensure enum value matches your schema
+        password: `driver@${Date.now()}`, // dummy password
+      },
+    });
+  }
+
+  // ✅ Ensure vendor exists
+  const vendor = await this.prisma.vendor.findUnique({
+    where: { id: vendorId },
+  });
+
+  if (!vendor) {
+    throw new BadRequestException(`Vendor with ID ${vendorId} does not exist.`);
+  }
+
+  // ✅ Create driver
   return this.prisma.driver.create({
     data: {
       fullName,
@@ -27,21 +52,21 @@ export class DriversService {
       phone,
       email,
       user: {
-        connect: { id: userId },
+        connect: { id: user.id },
       },
-      ...(typeof vendorId === 'number' && {
-        vendor: {
-          connect: { id: vendorId },
-        },
-      }),
-      ...(typeof vehicleId === 'number' && {
-        assignedVehicle: {
-          connect: { id: vehicleId },
-        },
-      }),
+      vendor: {
+        connect: { id: vendorId },
+      },
+      assignedVehicle: {
+        connect: { id: vehicleId },
+      },
     },
   });
 }
+// 🔁 END
+
+
+
 
   findAll() {
     return this.prisma.driver.findMany({
