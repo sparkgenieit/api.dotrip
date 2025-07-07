@@ -60,8 +60,8 @@ model Vendor {
   companyReg String   @unique
   createdAt  DateTime @default(now())
 
-  vendorId Int  @unique
-  vendor   User @relation("UserOwnsVendor", fields: [vendorId], references: [id])
+  userId Int? @unique
+  vendor User? @relation("UserOwnsVendor", fields: [userId], references: [id])
 
   users    User[]     @relation("VendorUsers")
   drivers  Driver[]   @relation("VendorDrivers")
@@ -104,10 +104,10 @@ model Driver {
   isAvailable       Boolean  @default(true)
   assignedVehicle   Vehicle? @relation(fields: [assignedVehicleId], references: [id])
   assignedVehicleId Int?     @unique // ✅ fix: unique constraint for 1:1 mapping
-  vendorId Int?
-  vendor   Vendor? @relation("VendorDrivers", fields: [vendorId], references: [id])
-  userId Int // ✅ Add this missing field
-  user   User @relation("UserDrivers", fields: [userId], references: [id]) // ✅ Fixes error
+  vendorId          Int?
+  vendor            Vendor?  @relation("VendorDrivers", fields: [vendorId], references: [id])
+  userId            Int // ✅ Add this missing field
+  user              User     @relation("UserDrivers", fields: [userId], references: [id]) // ✅ Fixes error
 
   trips Trip[]
 }
