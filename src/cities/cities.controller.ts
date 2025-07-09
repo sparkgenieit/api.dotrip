@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from 
 import { CitiesService } from './cities.service';
 import { CreateCityDto } from './dto/create-city.dto';
 import { UpdateCityDto } from './dto/update-city.dto';
+import { CalculateDistanceDto } from './dto/calculate-distance.dto';
 
 @Controller('cities')
 export class CitiesController {
@@ -24,7 +25,10 @@ export class CitiesController {
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.citiesService.findOne(id);
   }
-
+  @Post('calculate-distance')
+  calculateDistance(@Body() dto: CalculateDistanceDto) {
+    return this.citiesService.calculateTotalDistance(dto.cityIds);
+  }
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCityDto) {
     return this.citiesService.update(id, dto);

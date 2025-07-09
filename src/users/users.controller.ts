@@ -51,6 +51,7 @@ async checkEmail(@Body('email') email: string) {
     user: {
       id: user.id,
       name: user.name,
+      phone:user.phone,
       email: user.email,
     },
     addresses: user.addressBooks,

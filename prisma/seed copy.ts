@@ -34,32 +34,16 @@ async function main() {
     skipDuplicates: true
   });
 
-// ✅ Seed vehicle types with estimatedRatePerKm and baseFare
-await prisma.vehicleType.createMany({
-  data: [
-    {
-      name: "Sedan",
-      estimatedRatePerKm: 12,
-      baseFare: 350,
-    },
-    {
-      name: "SUV",
-      estimatedRatePerKm: 15,
-      baseFare: 500,
-    },
-    {
-      name: "Hatchback",
-      estimatedRatePerKm: 10,
-      baseFare: 300,
-    },
-    {
-      name: "Tempo Traveller",
-      estimatedRatePerKm: 18,
-      baseFare: 700,
-    },
-  ],
-  skipDuplicates: true,
-});
+  // ✅ Seed vehicle types
+  await prisma.vehicleType.createMany({
+    data: [
+      { name: "Sedan" },
+      { name: "SUV" },
+      { name: "Hatchback" },
+      { name: "Tempo Traveller" }
+    ],
+    skipDuplicates: true
+  });
 
   // ✅ Get first vehicle type
   const vehicleTypes = await prisma.vehicleType.findMany();
