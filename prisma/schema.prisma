@@ -106,9 +106,8 @@ model Driver {
   assignedVehicleId Int?     @unique // ✅ fix: unique constraint for 1:1 mapping
   vendorId          Int?
   vendor            Vendor?  @relation("VendorDrivers", fields: [vendorId], references: [id])
-  userId            Int // ✅ Add this missing field
-  user              User     @relation("UserDrivers", fields: [userId], references: [id]) // ✅ Fixes error
-
+  userId Int?
+  user   User? @relation("UserDrivers", fields: [userId], references: [id])
   trips Trip[]
 }
 
