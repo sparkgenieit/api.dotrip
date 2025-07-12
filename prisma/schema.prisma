@@ -49,9 +49,10 @@ model User {
   trips        Trip[]        @relation("UserTrips")
   addressBooks AddressBook[] @relation("UserAddressBooks")
 
-  vendor     Vendor?  @relation("VendorUsers", fields: [vendorId], references: [id])
-  ownsVendor Vendor?  @relation("UserOwnsVendor")
-  Driver     Driver[] @relation("UserDrivers") // ✅ added relation name
+  vendor     Vendor?    @relation("VendorUsers", fields: [vendorId], references: [id])
+  ownsVendor Vendor?    @relation("UserOwnsVendor")
+  Driver     Driver[]   @relation("UserDrivers") // ✅ added relation name
+  Feedback   Feedback[]
 }
 
 model Vendor {
@@ -60,7 +61,7 @@ model Vendor {
   companyReg String   @unique
   createdAt  DateTime @default(now())
 
-  userId Int? @unique
+  userId Int?  @unique
   vendor User? @relation("UserOwnsVendor", fields: [userId], references: [id])
 
   users    User[]     @relation("VendorUsers")
@@ -106,18 +107,21 @@ model Driver {
   assignedVehicleId Int?     @unique // ✅ fix: unique constraint for 1:1 mapping
   vendorId          Int?
   vendor            Vendor?  @relation("VendorDrivers", fields: [vendorId], references: [id])
+
   userId Int?
   user   User? @relation("UserDrivers", fields: [userId], references: [id])
   trips Trip[]
+  Feedback Feedback[]
+
 }
 
 model VehicleType {
-  id       Int       @id @default(autoincrement())
-  name     String    @unique
+  id                 Int       @id @default(autoincrement())
+  name               String    @unique
   estimatedRatePerKm Float     @default(10.0) // ✅ Add rate per km
-  baseFare          Float      @default(0.0)  // ✅ Optional: add base fare
-  vehicles Vehicle[]
-  bookings Booking[]
+  baseFare           Float     @default(0.0) // ✅ Optional: add base fare
+  vehicles           Vehicle[]
+  bookings           Booking[]
 }
 
 model City {
@@ -137,10 +141,10 @@ model City {
 }
 
 model CityDistance {
-  id         Int   @id @default(autoincrement())
-  fromCityId Int
-  toCityId   Int
-  distanceKm Float
+  id           Int    @id @default(autoincrement())
+  fromCityId   Int
+  toCityId     Int
+  distanceKm   Float
   // ✅ Add names for display/debug only
   fromCityName String
   toCityName   String
@@ -237,11 +241,12 @@ model Trip {
   breakdownNotes     String?
   createdAt          DateTime  @default(now())
 
-  booking Booking @relation("BookingTrip", fields: [bookingId], references: [id])
-  rider   User    @relation("UserTrips", fields: [riderId], references: [id])
-  driver  Driver  @relation(fields: [driverId], references: [id])
-  vehicle Vehicle @relation("VehicleTrips", fields: [vehicleId], references: [id])
-  vendor  Vendor  @relation("VendorTrips", fields: [vendorId], references: [id])
+  booking  Booking   @relation("BookingTrip", fields: [bookingId], references: [id])
+  rider    User      @relation("UserTrips", fields: [riderId], references: [id])
+  driver   Driver    @relation(fields: [driverId], references: [id])
+  vehicle  Vehicle   @relation("VehicleTrips", fields: [vehicleId], references: [id])
+  vendor   Vendor    @relation("VendorTrips", fields: [vendorId], references: [id])
+  Feedback Feedback?
 }
 
 model Earnings {
@@ -252,4 +257,21 @@ model Earnings {
   createdAt DateTime @default(now())
 
   vendor Vendor @relation("VendorEarnings", fields: [vendorId], references: [id])
+}
+
+model Feedback {
+  id       Int @id @default(autoincrement())
+  tripId   Int @unique
+  riderId  Int
+  driverId Int
+
+  driverRating  Int
+  vehicleRating Int
+  serviceRating Int
+  comment       String
+  feedbackTime  DateTime @default(now())
+
+  trip   Trip   @relation(fields: [tripId], references: [id])
+  rider  User   @relation(fields: [riderId], references: [id])
+  driver Driver @relation(fields: [driverId], references: [id])
 }
