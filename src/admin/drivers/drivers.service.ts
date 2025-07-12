@@ -90,37 +90,40 @@ async create(dto: CreateDriverDto) {
   }
 
   async update(id: string, dto: UpdateDriverDto) {
-    const {
+  const {
+    fullName,
+    licenseNumber,
+    phone,
+    email,
+    userId,
+    vendorId,
+    vehicleId,
+  } = dto;
+
+  return this.prisma.driver.update({
+    where: { id: parseInt(id) },
+    data: {
       fullName,
       licenseNumber,
       phone,
       email,
-      userId,
-      vendorId,
-      vehicleId,
-    } = dto;
-
-    return this.prisma.driver.update({
-      where: { id: parseInt(id) },
-      data: {
-        fullName,
-        licenseNumber,
-        phone,
-        email,
-        user: {
-          connect: { id: userId },
-        },
+      user: {
+        connect: { id: userId },
+      },
+      ...(vendorId !== undefined && {
         vendor: {
           connect: { id: vendorId },
         },
-        ...(vehicleId && {
-          assignedVehicle: {
-            connect: { id: vehicleId },
-          },
-        }),
-      },
-    });
-  }
+      }),
+      ...(vehicleId !== undefined && {
+        assignedVehicle: {
+          connect: { id: vehicleId },
+        },
+      }),
+    },
+  });
+}
+
 
   remove(id: string) {
     return this.prisma.driver.delete({
