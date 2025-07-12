@@ -18,6 +18,7 @@ import { VehicleTypesModule } from './vehicle-types/vehicle-types.module';
 import { AdminModule } from './admin/admin.module';
 
 import { DriverModule } from './drivers/driver.module'; // ✅ Import Driver Module
+import { FeedbackModule } from './feedback/feedback.module'; // ✅ NEW: Import Feedback Module
 
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
@@ -37,6 +38,8 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     VehicleTypesModule,
     CorporateBookingModule,
     DriverModule, // ✅ Register Driver Module here
+    FeedbackModule, // ✅ NEW: Register Feedback Module
+    
   ],
   providers: [
     {
