@@ -3,7 +3,7 @@ import { Body, Controller, Get, Post } from '@nestjs/common';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { TripsService } from './trips.service';
 
-@Controller('trips')
+@Controller('/admin/trips')
 export class TripsController {
   constructor(private readonly service: TripsService) {}
 
