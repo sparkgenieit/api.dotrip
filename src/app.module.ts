@@ -6,7 +6,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AddressBookModule } from './users/address-book/address-book.module';
-
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { CitiesModule } from './cities/cities.module';
 import { TripTypesModule } from './trip-types/trip-types.module';
