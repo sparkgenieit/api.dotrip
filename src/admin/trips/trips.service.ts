@@ -1,6 +1,5 @@
-
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 
 @Injectable()
@@ -27,11 +26,42 @@ async create(dto: CreateTripDto) {
   });
 }
 
+// 🔁 REPLACE the findAll method
+async findAll() {
+  const trips = await this.prisma.trip.findMany({
+    include: {
+      booking: {
+        include: {
+          pickupAddress: true,
+          dropAddress: true,
+          user: true,
+        },
+      },
+      driver: true,
+      vehicle: true,
+    },
+  });
 
-
-  findAll() {
-    return this.prisma.trip.findMany();
-  }
+  // Transform to match frontend structure
+  return trips.map((trip) => ({
+    ...trip,
+    bookings: {
+      pickup_location: trip.booking?.pickupAddress?.address ?? '',
+      dropoff_location: trip.booking?.dropAddress?.address ?? '',
+      profiles: {
+        full_name: trip.booking?.user?.name ?? 'Unknown',
+      },
+    },
+    drivers: {
+      profiles: {
+        full_name: trip.driver?.fullName ?? 'Unknown',
+      },
+    },
+    vehicles: {
+      vehicle_number: trip.vehicle?.registrationNumber ?? '',
+    },
+  }));
+}
 
   findOne(id: string) {
     return this.prisma.trip.findUnique({ where: { id: parseInt(id) } });
