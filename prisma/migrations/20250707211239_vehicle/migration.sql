@@ -1,9 +1,3 @@
-/*
-  Warnings:
-
-  - Made the column `userId` on table `driver` required. This step will fail if there are existing NULL values in that column.
-
-*/
 -- DropIndex
 DROP INDEX `Booking_dropAddressId_fkey` ON `booking`;
 
@@ -24,6 +18,9 @@ DROP INDEX `Booking_userId_fkey` ON `booking`;
 
 -- DropIndex
 DROP INDEX `Booking_vehicleTypeId_fkey` ON `booking`;
+
+-- DropIndex
+DROP INDEX `CityDistance_toCityId_fkey` ON `citydistance`;
 
 -- DropIndex
 DROP INDEX `Driver_userId_fkey` ON `driver`;
@@ -56,13 +53,14 @@ DROP INDEX `Vehicle_vehicleTypeId_fkey` ON `vehicle`;
 DROP INDEX `Vehicle_vendorId_fkey` ON `vehicle`;
 
 -- AlterTable
-ALTER TABLE `driver` MODIFY `userId` INTEGER NOT NULL;
+ALTER TABLE `vehicletype` ADD COLUMN `baseFare` DOUBLE NOT NULL DEFAULT 0.0,
+    ADD COLUMN `estimatedRatePerKm` DOUBLE NOT NULL DEFAULT 10.0;
 
 -- AddForeignKey
 ALTER TABLE `User` ADD CONSTRAINT `User_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `vendors`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `vendors` ADD CONSTRAINT `vendors_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `vendors` ADD CONSTRAINT `vendors_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Vehicle` ADD CONSTRAINT `Vehicle_vehicleTypeId_fkey` FOREIGN KEY (`vehicleTypeId`) REFERENCES `VehicleType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -78,6 +76,12 @@ ALTER TABLE `Driver` ADD CONSTRAINT `Driver_vendorId_fkey` FOREIGN KEY (`vendorI
 
 -- AddForeignKey
 ALTER TABLE `Driver` ADD CONSTRAINT `Driver_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CityDistance` ADD CONSTRAINT `CityDistance_fromCityId_fkey` FOREIGN KEY (`fromCityId`) REFERENCES `City`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CityDistance` ADD CONSTRAINT `CityDistance_toCityId_fkey` FOREIGN KEY (`toCityId`) REFERENCES `City`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `AddressBook` ADD CONSTRAINT `AddressBook_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -123,3 +127,9 @@ ALTER TABLE `Trip` ADD CONSTRAINT `Trip_vendorId_fkey` FOREIGN KEY (`vendorId`) 
 
 -- AddForeignKey
 ALTER TABLE `Earnings` ADD CONSTRAINT `Earnings_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `vendors`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `_BookingStopCities` ADD CONSTRAINT `_BookingStopCities_A_fkey` FOREIGN KEY (`A`) REFERENCES `Booking`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `_BookingStopCities` ADD CONSTRAINT `_BookingStopCities_B_fkey` FOREIGN KEY (`B`) REFERENCES `City`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

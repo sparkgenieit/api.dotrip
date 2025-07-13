@@ -34,32 +34,16 @@ async function main() {
     skipDuplicates: true
   });
 
-// ✅ Seed vehicle types with estimatedRatePerKm and baseFare
-await prisma.vehicleType.createMany({
-  data: [
-    {
-      name: "Sedan",
-      estimatedRatePerKm: 12,
-      baseFare: 350,
-    },
-    {
-      name: "SUV",
-      estimatedRatePerKm: 15,
-      baseFare: 500,
-    },
-    {
-      name: "Hatchback",
-      estimatedRatePerKm: 10,
-      baseFare: 300,
-    },
-    {
-      name: "Tempo Traveller",
-      estimatedRatePerKm: 18,
-      baseFare: 700,
-    },
-  ],
-  skipDuplicates: true,
-});
+  // ✅ Seed vehicle types
+  await prisma.vehicleType.createMany({
+    data: [
+      { name: "Sedan" },
+      { name: "SUV" },
+      { name: "Hatchback" },
+      { name: "Tempo Traveller" }
+    ],
+    skipDuplicates: true
+  });
 
   // ✅ Get first vehicle type
   const vehicleTypes = await prisma.vehicleType.findMany();
@@ -207,49 +191,7 @@ await prisma.vehicleType.createMany({
   console.log('\n✅ Seeding complete!');
   console.log(`🌆 Cities → Inserted: ${cityInserted}, Skipped: ${citySkipped}`);
   console.log(`📏 Distances → Inserted: ${distanceInserted}, Skipped: ${distanceSkipped}`);
-
-    // ✅ Seed feedback based on existing trips
-  const tripsForFeedback = await prisma.trip.findMany({
-    take: 2,
-    include: {
-      rider: true,
-      driver: true
-    }
-  });
-
-  if (tripsForFeedback.length === 0) {
-    console.warn("⚠️ No trips found. Skipping feedback seeding.");
-  } else {
-    const feedbackSeed = tripsForFeedback.map((trip, i) => ({
-      tripId: trip.id,
-      riderId: trip.riderId,
-      driverId: trip.driverId,
-      driverRating: [5, 4][i % 2],
-      vehicleRating: [4, 3][i % 2],
-      serviceRating: [5, 4][i % 2],
-      comment: [
-        'Smooth and professional ride!',
-        'Decent trip, but car was a bit dusty.',
-      ][i % 2],
-      feedbackTime: new Date(Date.now() - i * 86400000)
-    }));
-
-    for (const entry of feedbackSeed) {
-      const existing = await prisma.feedback.findUnique({
-        where: { tripId: entry.tripId }
-      });
-
-      if (!existing) {
-        await prisma.feedback.create({ data: entry });
-        console.log(`📝 Feedback seeded for tripId ${entry.tripId}`);
-      } else {
-        console.log(`⏭️ Feedback already exists for tripId ${entry.tripId}`);
-      }
-    }
-  }
-
 }
-
 
 main()
   .catch((e) => {

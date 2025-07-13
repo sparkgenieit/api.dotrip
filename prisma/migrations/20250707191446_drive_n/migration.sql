@@ -20,10 +20,10 @@ CREATE TABLE `vendors` (
     `name` VARCHAR(191) NOT NULL,
     `companyReg` VARCHAR(191) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `vendorId` INTEGER NOT NULL,
+    `userId` INTEGER NULL,
 
     UNIQUE INDEX `vendors_companyReg_key`(`companyReg`),
-    UNIQUE INDEX `vendors_vendorId_key`(`vendorId`),
+    UNIQUE INDEX `vendors_userId_key`(`userId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -50,14 +50,18 @@ CREATE TABLE `Vehicle` (
 -- CreateTable
 CREATE TABLE `Driver` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(191) NOT NULL,
-    `license` VARCHAR(191) NOT NULL,
+    `fullName` VARCHAR(191) NOT NULL,
+    `phone` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NOT NULL,
+    `licenseNumber` VARCHAR(191) NOT NULL,
+    `licenseExpiry` DATETIME(3) NOT NULL,
+    `isPartTime` BOOLEAN NOT NULL DEFAULT false,
+    `isAvailable` BOOLEAN NOT NULL DEFAULT true,
+    `assignedVehicleId` INTEGER NULL,
+    `vendorId` INTEGER NULL,
     `userId` INTEGER NOT NULL,
-    `vendorId` INTEGER NOT NULL,
-    `vehicleId` INTEGER NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    UNIQUE INDEX `Driver_vehicleId_key`(`vehicleId`),
+    UNIQUE INDEX `Driver_assignedVehicleId_key`(`assignedVehicleId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -75,7 +79,22 @@ CREATE TABLE `City` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(191) NOT NULL,
     `state` VARCHAR(191) NOT NULL,
+    `lat` DOUBLE NULL,
+    `lng` DOUBLE NULL,
 
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `CityDistance` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `fromCityId` INTEGER NOT NULL,
+    `toCityId` INTEGER NOT NULL,
+    `distanceKm` DOUBLE NOT NULL,
+    `fromCityName` VARCHAR(191) NOT NULL,
+    `toCityName` VARCHAR(191) NOT NULL,
+
+    UNIQUE INDEX `CityDistance_fromCityId_toCityId_key`(`fromCityId`, `toCityId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -83,8 +102,10 @@ CREATE TABLE `City` (
 CREATE TABLE `TripType` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `label` VARCHAR(191) NOT NULL,
+    `slug` VARCHAR(191) NOT NULL,
 
     UNIQUE INDEX `TripType_label_key`(`label`),
+    UNIQUE INDEX `TripType_slug_key`(`slug`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -174,11 +195,20 @@ CREATE TABLE `Earnings` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `_BookingStopCities` (
+    `A` INTEGER NOT NULL,
+    `B` INTEGER NOT NULL,
+
+    UNIQUE INDEX `_BookingStopCities_AB_unique`(`A`, `B`),
+    INDEX `_BookingStopCities_B_index`(`B`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
 ALTER TABLE `User` ADD CONSTRAINT `User_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `vendors`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `vendors` ADD CONSTRAINT `vendors_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `vendors` ADD CONSTRAINT `vendors_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Vehicle` ADD CONSTRAINT `Vehicle_vehicleTypeId_fkey` FOREIGN KEY (`vehicleTypeId`) REFERENCES `VehicleType`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -187,13 +217,19 @@ ALTER TABLE `Vehicle` ADD CONSTRAINT `Vehicle_vehicleTypeId_fkey` FOREIGN KEY (`
 ALTER TABLE `Vehicle` ADD CONSTRAINT `Vehicle_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `vendors`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `Driver` ADD CONSTRAINT `Driver_assignedVehicleId_fkey` FOREIGN KEY (`assignedVehicleId`) REFERENCES `Vehicle`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Driver` ADD CONSTRAINT `Driver_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `vendors`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `Driver` ADD CONSTRAINT `Driver_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Driver` ADD CONSTRAINT `Driver_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `vendors`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `CityDistance` ADD CONSTRAINT `CityDistance_fromCityId_fkey` FOREIGN KEY (`fromCityId`) REFERENCES `City`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Driver` ADD CONSTRAINT `Driver_vehicleId_fkey` FOREIGN KEY (`vehicleId`) REFERENCES `Vehicle`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `CityDistance` ADD CONSTRAINT `CityDistance_toCityId_fkey` FOREIGN KEY (`toCityId`) REFERENCES `City`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `AddressBook` ADD CONSTRAINT `AddressBook_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -239,3 +275,9 @@ ALTER TABLE `Trip` ADD CONSTRAINT `Trip_vendorId_fkey` FOREIGN KEY (`vendorId`) 
 
 -- AddForeignKey
 ALTER TABLE `Earnings` ADD CONSTRAINT `Earnings_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `vendors`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `_BookingStopCities` ADD CONSTRAINT `_BookingStopCities_A_fkey` FOREIGN KEY (`A`) REFERENCES `Booking`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `_BookingStopCities` ADD CONSTRAINT `_BookingStopCities_B_fkey` FOREIGN KEY (`B`) REFERENCES `City`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
