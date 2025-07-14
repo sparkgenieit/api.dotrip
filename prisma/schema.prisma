@@ -43,16 +43,14 @@ model User {
   role      Role     @default(RIDER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  vendorId  Int?
 
+  ownsVendor Vendor? @relation("UserOwnsVendor") // ✅ vendor creator
+
+  Driver       Driver[]      @relation("UserDrivers")
+  Feedback     Feedback[]
   bookings     Booking[]     @relation("UserBookings")
   trips        Trip[]        @relation("UserTrips")
   addressBooks AddressBook[] @relation("UserAddressBooks")
-
-  vendor     Vendor?    @relation("VendorUsers", fields: [vendorId], references: [id])
-  ownsVendor Vendor?    @relation("UserOwnsVendor")
-  Driver     Driver[]   @relation("UserDrivers") // ✅ added relation name
-  Feedback   Feedback[]
 }
 
 model Vendor {
@@ -64,7 +62,6 @@ model Vendor {
   userId Int?  @unique
   vendor User? @relation("UserOwnsVendor", fields: [userId], references: [id])
 
-  users    User[]     @relation("VendorUsers")
   drivers  Driver[]   @relation("VendorDrivers")
   vehicles Vehicle[]
   trips    Trip[]     @relation("VendorTrips")
@@ -74,25 +71,29 @@ model Vendor {
 }
 
 model Vehicle {
-  id                 Int         @id @default(autoincrement())
+  id                 Int       @id @default(autoincrement())
   name               String
   model              String
   image              String
   capacity           Int
-  registrationNumber String      @unique
-  price              Int         @default(0)
-  originalPrice      Int         @default(0)
-  status             String      @default("available")
+  registrationNumber String    @unique
+  price              Int       @default(0)
+  originalPrice      Int       @default(0)
+  status             String    @default("available")
   comfortLevel       Int
   lastServicedDate   DateTime?
   vehicleTypeId      Int
-  vehicleType        VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  createdBy          Role      @default(VENDOR) // either VENDOR or DRIVER
 
-  driver Driver[] @relation("VehicleToDriver") // ✅ All drivers assigned to this vehicle
-  trips  Trip[]   @relation("VehicleTrips")
+  // Owner (Vendor or Driver)
+  vendorId      Int?
+  vendor        Vendor? @relation(fields: [vendorId], references: [id])
+  driverOwnerId Int?
+  driverOwner   Driver? @relation(fields: [driverOwnerId], references: [id])
 
-  vendorId Int?
-  vendor   Vendor? @relation(fields: [vendorId], references: [id])
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  driver      Driver[]    @relation("VehicleToDriver")
+  trips       Trip[]      @relation("VehicleTrips")
 }
 
 // ✅ Updated Prisma Schema for Driver model with new UI fields
@@ -117,6 +118,7 @@ model Driver {
 
   trips    Trip[]
   Feedback Feedback[]
+  Vehicle  Vehicle[]
 }
 
 model VehicleType {
@@ -204,7 +206,7 @@ model Booking {
   dropAddress      AddressBook       @relation("BookingDropAddress", fields: [dropAddressId], references: [id])
   fromCity         City              @relation("BookingFromCity", fields: [fromCityId], references: [id])
   toCity           City              @relation("BookingToCity", fields: [toCityId], references: [id])
-  trip             Trip?             @relation("BookingTrip")
+  trips            Trip[]            @relation("BookingTrip")
   TripType         TripType          @relation(fields: [tripTypeId], references: [id])
   CorporateBooking CorporateBooking?
 
@@ -232,7 +234,7 @@ model CorporateBooking {
 
 model Trip {
   id                 Int       @id @default(autoincrement())
-  bookingId          Int       @unique
+  bookingId          Int
   riderId            Int
   driverId           Int
   vehicleId          Int

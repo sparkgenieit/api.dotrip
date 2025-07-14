@@ -1,9 +1,9 @@
 // src/auth/auth.service.ts
 
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService }                        from '@nestjs/jwt';
-import { PrismaService }                    from '../prisma/prisma.service';
-import * as bcrypt                           from 'bcryptjs';
+import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
@@ -21,7 +21,7 @@ export class AuthService {
     // 1) lookup by email
     const user = await this.prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true, password: true, role: true, vendorId: true },
+      select: { id: true, email: true, password: true, role: true },
     });
 
     if (!user) {
@@ -42,17 +42,27 @@ export class AuthService {
   /**
    * Issue a JWT for the validated user.
    */
-  async login(user: { id: number; email: string; role: string; vendorId?: number }) {
-    const payload = {
+  async login(user: { id: number; email: string; role: string }) {
+ const vendor = await this.prisma.vendor.findFirst({
+  where: { userId: user.id },
+});
+
+const driver = await this.prisma.driver.findFirst({
+  where: { userId: user.id },
+});
+
+    const payload: any = {
       sub: user.id,
       email: user.email,
       role: user.role,
-      vendorId: user.vendorId,
+      ...(vendor && { vendorId: vendor.id }),
+      ...(driver && { driverId: driver.id }),
     };
+
     return {
-      access_token: this.jwtService.sign(payload,{
-  expiresIn: '7d', // Change this to a longer duration like '1h', '12h', '7d'
-}),
+      access_token: this.jwtService.sign(payload, {
+        expiresIn: '7d',
+      }),
     };
   }
 }

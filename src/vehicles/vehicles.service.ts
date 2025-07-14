@@ -7,9 +7,12 @@ import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
 export class VehiclesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(filters: { vendorId?: number }) {
+  async findAll(filters: { vendorId?: number; driverOwnerId?: number }) {
     return this.prisma.vehicle.findMany({
-      where: filters.vendorId ? { vendorId: filters.vendorId } : undefined,
+      where: {
+        ...(filters.vendorId ? { vendorId: filters.vendorId } : {}),
+        ...(filters.driverOwnerId ? { driverOwnerId: filters.driverOwnerId } : {}),
+      },
       include: {
         vendor: true,
         driver: true,
@@ -23,35 +26,39 @@ export class VehiclesService {
       include: {
         vendor: true,
         driver: true,
-        vehicleType: true, // ✅ Include vehicleType for prefill
+        vehicleType: true,
       },
     });
     if (!vehicle) throw new NotFoundException(`Vehicle #${id} not found`);
     return vehicle;
   }
-  // src/vehicles/vehicles.service.ts
 
   async findAvailableByType(typeId: number) {
     return this.prisma.vehicle.findMany({
       where: {
         vehicleTypeId: typeId,
-        status: "available", // Or use your actual available status
+        status: "available",
       },
-     include: {
-    driver: {
-      select: {
-        id: true,
-        fullName: true,
-        phone: true,
+      include: {
+        driver: {
+          select: {
+            id: true,
+            fullName: true,
+            phone: true,
+          },
+        },
       },
-    },
-  },
     });
   }
 
   async create(
     dto: CreateVehicleDto,
-    current: { userId?: number; role: string; vendorId?: number }
+    current: {
+      userId?: number;
+      role: string;
+      vendorId?: number;
+      driverId?: number;
+    }
   ) {
     const data: any = {
       name: dto.name,
@@ -67,11 +74,13 @@ export class VehiclesService {
       lastServicedDate: dto.lastServicedDate
         ? new Date(dto.lastServicedDate)
         : undefined,
+      createdBy: current.role,
     };
 
-    // ✅ Set scalar vendorId instead of relational connect
-    if (current.role === "VENDOR" && current.userId) {
-      data.vendorId = current.userId;
+    if (current.role === "VENDOR" && current.vendorId) {
+      data.vendorId = current.vendorId;
+    } else if (current.role === "DRIVER" && current.driverId) {
+      data.driverOwnerId = current.driverId;
     } else if (dto.vendorId) {
       data.vendorId = dto.vendorId;
     }
@@ -89,9 +98,8 @@ export class VehiclesService {
       }),
     };
 
-    // ✅ Set scalar vendorId directly
     if (vendorId !== undefined) {
-      data.vendorId = vendorId || null; // null will disconnect
+      data.vendorId = vendorId || null;
     }
 
     return this.prisma.vehicle.update({ where: { id }, data });
@@ -104,7 +112,12 @@ export class VehiclesService {
 
   async register(
     dto: CreateVehicleDto,
-    current: { role: string; vendorId?: number }
+    current: {
+      userId?: number;
+      role: string;
+      vendorId?: number;
+      driverId?: number;
+    }
   ) {
     return this.create(dto, current);
   }

@@ -1,4 +1,3 @@
-// src/vehicles/vehicles.controller.ts
 import {
   Controller,
   Get,
@@ -7,52 +6,60 @@ import {
   Patch,
   Param,
   Delete,
-  Req,
   UseGuards,
+  Req,
   Query,
+  BadRequestException,
 } from "@nestjs/common";
 import { VehiclesService } from "./vehicles.service";
 import { CreateVehicleDto } from "./dto/create-vehicle.dto";
 import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard"; // ✅ Fixed import path
-import { Request } from "express";
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    userId?: number;
-    vendorId?: number;
-    driverId?: number;
-    role: string;
-  };
-}
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { RolesGuard } from "../auth/roles.guard";
+import { Roles } from "../auth/roles.decorator";
+import { AuthRequest } from "../types/auth-request";
 
 @Controller("vehicles")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 
   @Post()
-  create(@Body() dto: CreateVehicleDto, @Req() req: AuthenticatedRequest) {
-    return this.vehiclesService.create(dto, req.user!);
+  @Roles("ADMIN", "VENDOR", "DRIVER")
+  create(@Body() createVehicleDto: CreateVehicleDto, @Req() req: AuthRequest) {
+    return this.vehiclesService.create(createVehicleDto, req.user);
   }
 
   @Get()
-  findAll(@Query() filters: { vendorId?: number }) {
-    return this.vehiclesService.findAll(filters);
+  @Roles("ADMIN", "VENDOR", "DRIVER")
+  findAll(@Req() req: AuthRequest) {
+    const { role, vendorId, driverId } = req.user;
+
+    if (role === "VENDOR" && vendorId) {
+      return this.vehiclesService.findAll({ vendorId });
+    }
+
+    if (role === "DRIVER" && driverId) {
+      return this.vehiclesService.findAll({ driverOwnerId: driverId });
+    }
+
+    // ADMIN or fallback – return all
+    return this.vehiclesService.findAll({});
   }
+
   @Get("available")
-  @UseGuards(JwtAuthGuard)
-  findAvailable(@Query("typeId") typeId: string) {
-    return this.vehiclesService.findAvailableByType(Number(typeId));
-  }
-  @Get(":id")
-  findOne(@Param("id") id: string) {
-    return this.vehiclesService.findOne(+id);
+  @Roles("ADMIN", "VENDOR")
+  getAvailableVehicles(@Query("typeId") typeId: string) {
+    const parsedId = parseInt(typeId);
+    if (isNaN(parsedId)) {
+      throw new BadRequestException("Invalid vehicle typeId");
+    }
+    return this.vehiclesService.findAvailableByType(parsedId);
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body() dto: UpdateVehicleDto) {
-    return this.vehiclesService.update(+id, dto);
+  update(@Param("id") id: string, @Body() updateVehicleDto: UpdateVehicleDto) {
+    return this.vehiclesService.update(+id, updateVehicleDto);
   }
 
   @Delete(":id")

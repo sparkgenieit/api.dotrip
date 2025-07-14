@@ -17,7 +17,7 @@ import { VehicleTypesModule } from './vehicle-types/vehicle-types.module';
 import { AdminModule } from './admin/admin.module';
 
 import { DriverModule } from './drivers/driver.module'; // ✅ Import Driver Module
-import { TripsModule } from './admin/trips/trips.module'; // adjust if in admin/trips
+import { TripsModule } from './trips/trips.module'; 
 import { FeedbackModule } from './feedback/feedback.module'; // ✅ NEW: Import Feedback Module
 
 
