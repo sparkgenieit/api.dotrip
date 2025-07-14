@@ -8,7 +8,7 @@ export class BookingService {
 
   async create(dto: any) {
     const {
-      email,
+      phone,
       pickupLocation,
       dropoffLocation,
       pickupDateTime,
@@ -19,7 +19,7 @@ export class BookingService {
       fare,
     } = dto;
 
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findFirst({ where: { phone } });
     if (!user) throw new NotFoundException('User not found');
 
     const pickupAddress = await this.prisma.addressBook.upsert({

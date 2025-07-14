@@ -10,12 +10,12 @@ import {
   Req,
   UseGuards,
   Query,
-} from '@nestjs/common';
-import { VehiclesService } from './vehicles.service';
-import { CreateVehicleDto } from './dto/create-vehicle.dto';
-import { UpdateVehicleDto } from './dto/update-vehicle.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // ✅ Fixed import path
-import { Request } from 'express';
+} from "@nestjs/common";
+import { VehiclesService } from "./vehicles.service";
+import { CreateVehicleDto } from "./dto/create-vehicle.dto";
+import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard"; // ✅ Fixed import path
+import { Request } from "express";
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -26,7 +26,7 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-@Controller('vehicles')
+@Controller("vehicles")
 @UseGuards(JwtAuthGuard)
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
@@ -40,19 +40,23 @@ export class VehiclesController {
   findAll(@Query() filters: { vendorId?: number }) {
     return this.vehiclesService.findAll(filters);
   }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
+  @Get("available")
+  @UseGuards(JwtAuthGuard)
+  findAvailable(@Query("typeId") typeId: string) {
+    return this.vehiclesService.findAvailableByType(Number(typeId));
+  }
+  @Get(":id")
+  findOne(@Param("id") id: string) {
     return this.vehiclesService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateVehicleDto) {
+  @Patch(":id")
+  update(@Param("id") id: string, @Body() dto: UpdateVehicleDto) {
     return this.vehiclesService.update(+id, dto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
+  @Delete(":id")
+  remove(@Param("id") id: string) {
     return this.vehiclesService.remove(+id);
   }
 }

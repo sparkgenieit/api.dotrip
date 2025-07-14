@@ -6,8 +6,8 @@ import {
 } from 'class-validator';
 
 export class CreateBookingPublicDto {
-  @IsEmail()
-  email: string;
+   @IsString()
+  phone?: string;
 
   @IsString()
   pickupLocation: string;

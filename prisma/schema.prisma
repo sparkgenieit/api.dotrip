@@ -87,32 +87,36 @@ model Vehicle {
   lastServicedDate   DateTime?
   vehicleTypeId      Int
   vehicleType        VehicleType @relation(fields: [vehicleTypeId], references: [id])
-  driver             Driver?
-  trips              Trip[]      @relation("VehicleTrips")
-  vendor             Vendor?     @relation(fields: [vendorId], references: [id])
-  vendorId           Int?
+
+  driver Driver[] @relation("VehicleToDriver") // ✅ All drivers assigned to this vehicle
+  trips  Trip[]   @relation("VehicleTrips")
+
+  vendorId Int?
+  vendor   Vendor? @relation(fields: [vendorId], references: [id])
 }
 
 // ✅ Updated Prisma Schema for Driver model with new UI fields
 model Driver {
-  id                Int      @id @default(autoincrement())
-  fullName          String
-  phone             String
-  email             String
-  licenseNumber     String
-  licenseExpiry     DateTime
-  isPartTime        Boolean  @default(false)
-  isAvailable       Boolean  @default(true)
-  assignedVehicle   Vehicle? @relation(fields: [assignedVehicleId], references: [id])
-  assignedVehicleId Int?     @unique // ✅ fix: unique constraint for 1:1 mapping
-  vendorId          Int?
-  vendor            Vendor?  @relation("VendorDrivers", fields: [vendorId], references: [id])
+  id            Int      @id @default(autoincrement())
+  fullName      String
+  phone         String
+  email         String
+  licenseNumber String
+  licenseExpiry DateTime
+  isPartTime    Boolean  @default(false)
+  isAvailable   Boolean  @default(true)
+
+  assignedVehicleId Int?     @unique
+  assignedVehicle   Vehicle? @relation("VehicleToDriver", fields: [assignedVehicleId], references: [id]) // ✅ Backward link
+
+  vendorId Int?
+  vendor   Vendor? @relation("VendorDrivers", fields: [vendorId], references: [id])
 
   userId Int?
   user   User? @relation("UserDrivers", fields: [userId], references: [id])
-  trips Trip[]
-  Feedback Feedback[]
 
+  trips    Trip[]
+  Feedback Feedback[]
 }
 
 model VehicleType {
@@ -188,6 +192,8 @@ model Booking {
   toCityId        Int
   tripTypeId      Int
   fare            Float
+  numPersons      Int      @default(1) // ✅ Default added
+  numVehicles     Int      @default(1) // ✅ Default added
   bookingType     String   @default("individual")
   status          String   @default("PENDING")
   createdAt       DateTime @default(now())

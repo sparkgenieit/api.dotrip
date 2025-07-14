@@ -58,5 +58,24 @@ async checkEmail(@Body('email') email: string) {
   };
 }
 
+// users.controller.ts
+@Post('check-phone')
+async checkPhone(@Body('phone') phone: string) {
+  const user = await this.usersService.findByPhone(phone);
+  if (!user) return { exists: false };
+
+  return {
+    exists: true,
+    user: {
+      id: user.id,
+      name: user.name,
+      phone:user.phone,
+      email: user.email,
+    },
+    addresses: user.addressBooks,
+  };
+}
+
+
 
 }

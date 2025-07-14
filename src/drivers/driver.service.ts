@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable,NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
@@ -84,6 +84,38 @@ export class DriverService {
               connect: { id: Number(dto.assigned_vehicle_id) },
             }
           : undefined,
+      },
+    });
+  }
+
+  async getAvailableDrivers() {
+    return this.prisma.driver.findMany({
+      where: {
+        assignedVehicleId: null,
+        isAvailable: true,
+      },
+      select: {
+        id: true,
+        fullName: true,
+        phone: true,
+      },
+    });
+  }
+
+  async assignDriverToVehicle(driverId: number, vehicleId: number) {
+    if (!driverId || typeof driverId !== 'number') {
+    throw new Error('Invalid driver ID');
+  }
+    const driver = await this.prisma.driver.findUnique({
+      where: { id: driverId },
+    });
+
+    if (!driver) throw new NotFoundException('Driver not found');
+
+    return this.prisma.driver.update({
+      where: { id: driverId },
+      data: {
+        assignedVehicleId: vehicleId,
       },
     });
   }

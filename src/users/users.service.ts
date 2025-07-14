@@ -79,4 +79,21 @@ async findByEmailWithAddresses(email: string) {
   });
 }
 
+
+async findByPhone(phone: string) {
+  return this.prisma.user.findFirst({
+    where: { phone },
+    include: {
+      addressBooks: {
+        where: {
+          type: {
+            in: ['PICKUP', 'DROP'],
+          },
+        },
+      },
+    },
+  });
+}
+
+
 }

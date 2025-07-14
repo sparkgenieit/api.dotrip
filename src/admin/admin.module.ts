@@ -2,8 +2,6 @@
 
 import { Module } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { DriversService } from './drivers/drivers.service';
-import { DriversController } from './drivers/drivers.controller';
 import { TripsModule } from './trips/trips.module';
 import { VendorModule } from './vendor/vendor.module';  // ← add this
 
@@ -13,7 +11,7 @@ import { VendorModule } from './vendor/vendor.module';  // ← add this
     TripsModule,
   ],
 
-  controllers: [DriversController],
-  providers: [DriversService,  PrismaService],
+  controllers: [],
+  providers: [  PrismaService],
 })
 export class AdminModule {}

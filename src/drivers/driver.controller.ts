@@ -1,5 +1,5 @@
 // ✅ driver.controller.ts
-import { Controller, Post, Body, Get, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Put, Patch, NotFoundException } from '@nestjs/common';
 import { DriverService } from './driver.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
@@ -17,10 +17,22 @@ export class DriverController {
   findAll() {
     return this.driverService.findAll();
   }
+  @Get('/available')
+  getAvailableDrivers() {
+    return this.driverService.getAvailableDrivers();
+  }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.driverService.findOne(+id);
+ 
+
+  @Patch('/assign')
+  async assignDriverToVehicle(
+    @Body('driverId') driverId: number,
+    @Body('vehicleId') vehicleId: number,
+  ) {
+    if (!driverId || !vehicleId) {
+      throw new NotFoundException('Driver ID and Vehicle ID required');
+    }
+    return this.driverService.assignDriverToVehicle(driverId, vehicleId);
   }
 
   @Put(':id')
