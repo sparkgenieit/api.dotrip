@@ -16,10 +16,13 @@ import { PlacesModule } from './places/places.module';
 import { VehicleTypesModule } from './vehicle-types/vehicle-types.module';
 import { AdminModule } from './admin/admin.module';
 
-import { DriverModule } from './drivers/driver.module'; // ✅ Import Driver Module
-import { TripsModule } from './trips/trips.module'; 
-import { FeedbackModule } from './feedback/feedback.module'; // ✅ NEW: Import Feedback Module
+import { DriverModule } from './drivers/driver.module';
+import { TripsModule } from './trips/trips.module';
+import { FeedbackModule } from './feedback/feedback.module';
+import { QuotesModule } from './quotes/quotes.module';
 
+import { GlobalModule } from './global.module';
+import { WhatsAppModule } from './whatsapp/whatsapp.module'; // ✅ NEW: WhatsApp module
 
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
@@ -39,9 +42,11 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     VehicleTypesModule,
     CorporateBookingModule,
     TripsModule,
-    DriverModule, // ✅ Register Driver Module here
-    FeedbackModule, // ✅ NEW: Register Feedback Module
-    
+    DriverModule,
+    FeedbackModule,
+    QuotesModule,
+      GlobalModule,   // ✅ Register global email
+    WhatsAppModule,      // ✅ Register WhatsApp messaging
   ],
   providers: [
     {

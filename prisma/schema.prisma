@@ -66,6 +66,8 @@ model Vendor {
   vehicles Vehicle[]
   trips    Trip[]     @relation("VendorTrips")
   earnings Earnings[] @relation("VendorEarnings")
+  Booking  Booking[]
+  Quote    Quote[]
 
   @@map("vendors")
 }
@@ -184,22 +186,24 @@ model AddressBook {
 }
 
 model Booking {
-  id              Int      @id @default(autoincrement())
-  userId          Int
-  vehicleTypeId   Int
-  pickupAddressId Int
-  dropAddressId   Int
-  pickupDateTime  DateTime
-  fromCityId      Int
-  toCityId        Int
-  tripTypeId      Int
-  fare            Float
-  numPersons      Int      @default(1) // ✅ Default added
-  numVehicles     Int      @default(1) // ✅ Default added
-  bookingType     String   @default("individual")
-  status          String   @default("PENDING")
-  createdAt       DateTime @default(now())
-
+  id               Int               @id @default(autoincrement())
+  userId           Int
+  vehicleTypeId    Int
+  pickupAddressId  Int
+  dropAddressId    Int
+  pickupDateTime   DateTime
+  fromCityId       Int
+  toCityId         Int
+  tripTypeId       Int
+  fare             Float
+  numPersons       Int               @default(1) // ✅ Default added
+  numVehicles      Int               @default(1) // ✅ Default added
+  bookingType      String            @default("individual")
+  status           String            @default("PENDING")
+  createdAt        DateTime          @default(now())
+  vendorId         Int? // ✅ Added — vendor assigned after quote approval
+  vendor           Vendor?           @relation(fields: [vendorId], references: [id])
+  quotes           Quote[]
   user             User              @relation("UserBookings", fields: [userId], references: [id])
   vehicleType      VehicleType       @relation(fields: [vehicleTypeId], references: [id])
   pickupAddress    AddressBook       @relation("BookingPickupAddress", fields: [pickupAddressId], references: [id])
@@ -212,6 +216,18 @@ model Booking {
 
   // ✅ New: multi-city stop support
   stopCities City[] @relation("BookingStopCities")
+}
+
+model Quote {
+  id        Int      @id @default(autoincrement())
+  bookingId Int
+  vendorId  Int
+  amount    Float
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+  vendor  Vendor  @relation(fields: [vendorId], references: [id])
 }
 
 model CorporateBooking {
