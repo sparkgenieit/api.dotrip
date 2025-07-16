@@ -32,6 +32,18 @@ DROP INDEX `Driver_vendorId_fkey` ON `driver`;
 DROP INDEX `Earnings_vendorId_fkey` ON `earnings`;
 
 -- DropIndex
+DROP INDEX `Feedback_driverId_fkey` ON `feedback`;
+
+-- DropIndex
+DROP INDEX `Feedback_riderId_fkey` ON `feedback`;
+
+-- DropIndex
+DROP INDEX `Invoice_userId_fkey` ON `invoice`;
+
+-- DropIndex
+DROP INDEX `Invoice_vendorId_fkey` ON `invoice`;
+
+-- DropIndex
 DROP INDEX `Trip_driverId_fkey` ON `trip`;
 
 -- DropIndex
@@ -52,21 +64,8 @@ DROP INDEX `Vehicle_vehicleTypeId_fkey` ON `vehicle`;
 -- DropIndex
 DROP INDEX `Vehicle_vendorId_fkey` ON `vehicle`;
 
--- CreateTable
-CREATE TABLE `Feedback` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `tripId` INTEGER NOT NULL,
-    `riderId` INTEGER NOT NULL,
-    `driverId` INTEGER NOT NULL,
-    `driverRating` INTEGER NOT NULL,
-    `vehicleRating` INTEGER NOT NULL,
-    `serviceRating` INTEGER NOT NULL,
-    `comment` VARCHAR(191) NOT NULL,
-    `feedbackTime` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-
-    UNIQUE INDEX `Feedback_tripId_key`(`tripId`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- AlterTable
+ALTER TABLE `feedback` MODIFY `driverId` INTEGER NULL;
 
 -- AddForeignKey
 ALTER TABLE `User` ADD CONSTRAINT `User_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `vendors`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -147,7 +146,16 @@ ALTER TABLE `Feedback` ADD CONSTRAINT `Feedback_tripId_fkey` FOREIGN KEY (`tripI
 ALTER TABLE `Feedback` ADD CONSTRAINT `Feedback_riderId_fkey` FOREIGN KEY (`riderId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Feedback` ADD CONSTRAINT `Feedback_driverId_fkey` FOREIGN KEY (`driverId`) REFERENCES `Driver`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Feedback` ADD CONSTRAINT `Feedback_driverId_fkey` FOREIGN KEY (`driverId`) REFERENCES `Driver`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Invoice` ADD CONSTRAINT `Invoice_tripId_fkey` FOREIGN KEY (`tripId`) REFERENCES `Trip`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Invoice` ADD CONSTRAINT `Invoice_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `vendors`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Invoice` ADD CONSTRAINT `Invoice_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `_BookingStopCities` ADD CONSTRAINT `_BookingStopCities_A_fkey` FOREIGN KEY (`A`) REFERENCES `Booking`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
