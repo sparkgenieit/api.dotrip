@@ -31,7 +31,7 @@ export class QuotesService {
     }
 
     const adminUrl = process.env.ADMIN_URL || 'http://localhost:3005';
-    const bookingLink = `${adminUrl}/vendor-quotes?bookingId=${bookingId}`;
+    const bookingLink = `${adminUrl}/dashboard/bookings/view/?bookingId=${bookingId}`;
 
     for (const vendor of vendors) {
       if (!vendor.email) continue;
@@ -71,15 +71,15 @@ export class QuotesService {
     });
   }
 
-  async submitQuote(dto: SubmitQuoteDto) {
-    return this.prisma.quote.create({
-      data: {
-        bookingId: dto.bookingId,
-        vendorId: 1, // TODO: derive from token/session
-        amount: dto.amount,
-      },
-    });
-  }
+  async submitQuote(dto: SubmitQuoteDto, vendorId: number) {
+  return this.prisma.quote.create({
+    data: {
+      bookingId: dto.bookingId,
+      vendorId: vendorId, // ✅ passed from req.user.id
+      amount: dto.amount,
+    },
+  });
+}
 
   async getQuotesForBooking(bookingId: number) {
     return this.prisma.quote.findMany({
