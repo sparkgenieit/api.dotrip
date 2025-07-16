@@ -51,6 +51,7 @@ model User {
   bookings     Booking[]     @relation("UserBookings")
   trips        Trip[]        @relation("UserTrips")
   addressBooks AddressBook[] @relation("UserAddressBooks")
+  invoices  Invoice[] 
 }
 
 model Vendor {
@@ -68,7 +69,7 @@ model Vendor {
   earnings Earnings[] @relation("VendorEarnings")
   Booking  Booking[]
   Quote    Quote[]
-
+  invoices  Invoice[] 
   @@map("vendors")
 }
 
