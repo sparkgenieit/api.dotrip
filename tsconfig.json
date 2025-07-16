@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "target": "ES2017",
     "sourceMap": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
