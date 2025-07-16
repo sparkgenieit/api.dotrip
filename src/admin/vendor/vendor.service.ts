@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class VendorService {
@@ -9,6 +10,8 @@ export class VendorService {
 
  async create(data: CreateVendorDto) {
     try {
+      const password = await bcrypt.hash('123123', 10);
+
       return await this.prisma.vendor.create({
       data: {
         name: data.name,
@@ -21,7 +24,7 @@ export class VendorService {
               name: data.name,
               email: data.email,
               phone: data.phone,
-              password: 'changeme123',
+              password: password,
               role: 'VENDOR',
             },
           },
