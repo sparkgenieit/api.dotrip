@@ -2,12 +2,14 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class DriverService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateDriverDto) {
+   const password = await bcrypt.hash('123123', 10);
     return this.prisma.driver.create({
       data: {
         fullName: dto.fullName,
@@ -35,7 +37,7 @@ export class DriverService {
             name: dto.fullName,
             email: dto.email,
             phone: dto.phone,
-            password: 'default@123', // TODO: hash before save
+            password: password, // TODO: hash before save
             role: 'DRIVER',
           },
         },
