@@ -58,6 +58,52 @@ export class InvoiceService {
     if (!invoice) throw new NotFoundException('Invoice not found');
     return invoice;
   }
+  
+   // ✅ INSERTED FUNCTION
+  async generateInvoice(tripId: number) {
+  const trip = await this.prisma.trip.findUnique({
+    where: { id: tripId },
+    include: {
+      //user: true,
+      vendor: true,
+      booking: {
+        select: {
+          fare: true,
+          userId: true, // ✅ Ensure this is included for TS safety
+        },
+      },
+    },
+  });
+
+  if (!trip) throw new NotFoundException(`Trip with ID ${tripId} not found`);
+
+  const existingInvoice = await this.prisma.invoice.findUnique({
+    where: { tripId },
+  });
+
+  if (existingInvoice) throw new Error(`Invoice already exists for Trip ID ${tripId}`);
+
+  const subtotal = trip.booking?.fare || 0;
+  const vendorCommission = subtotal * 0.85;
+  const adminCommission = subtotal * 0.15;
+  const totalAmount = subtotal;
+  const invoiceNumber = `INV-${Date.now()}`;
+
+  return this.prisma.invoice.create({
+    data: {
+      invoiceNumber,
+      subtotal,
+      vendorCommission,
+      adminCommission,
+      totalAmount,
+      pdfUrl: '',
+      tripId: trip.id,
+      vendorId: trip.vendorId,
+      userId: trip.booking.userId,
+    },
+  });
+}
+
 
   async generateInvoicePdf(id: number): Promise<Buffer> {
     const invoice = await this.getInvoiceById(id);

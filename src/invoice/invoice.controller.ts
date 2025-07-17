@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Post, Get, Param, Res } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
 import { Response } from 'express';
 
@@ -24,5 +24,10 @@ export class InvoiceController {
       'Content-Disposition': `attachment; filename=invoice-${id}.pdf`,
     });
     res.send(pdfBuffer);
+  }
+  // ✅ NEW: Generate Invoice from Trip
+  @Post('generate/:tripId')
+  async generate(@Param('tripId') tripId: string) {
+    return this.invoiceService.generateInvoice(Number(tripId));
   }
 }
