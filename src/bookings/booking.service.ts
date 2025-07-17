@@ -80,6 +80,10 @@ export class BookingService {
         fromCity: true,
         toCity: true,
         TripType: true,
+        quotes: {
+        where: { approved: true },
+        select: { id: true },
+      },
       },
     });
   }
@@ -95,6 +99,10 @@ export class BookingService {
         fromCity: true,
         toCity: true,
         TripType: true,
+        quotes: {
+        where: { approved: true },
+        select: { id: true },
+      },
       },
     });
   }

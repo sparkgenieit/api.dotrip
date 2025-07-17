@@ -11,7 +11,7 @@ export class TripsService {
   async create(data: CreateTripDto) {
     return this.prisma.trip.create({ data });
   }
-
+  
   async findAll() {
     return this.prisma.trip.findMany({
       include: {
