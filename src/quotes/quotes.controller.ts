@@ -47,7 +47,9 @@ export class QuotesController {
   }
 
   @Post('approve')
-  approveQuote(@Body() dto: ApproveQuoteDto) {
-    return this.quotesService.approveQuote(dto.quoteId);
-  }
+approve(@Body() body: { quoteId: number }) {
+  console.log('Received body:', body); // ✅ Should show quoteId
+  return this.quotesService.approveQuote(body.quoteId);
+}
+
 }
