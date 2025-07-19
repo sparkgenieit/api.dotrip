@@ -17,14 +17,16 @@ export class InvoiceController {
   }
 
   @Get(':id/download')
-  async downloadPdf(@Param('id') id: string, @Res() res: Response) {
-    const pdfBuffer = await this.invoiceService.generateInvoicePdf(Number(id));
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename=invoice-${id}.pdf`,
-    });
-    res.send(pdfBuffer);
-  }
+async downloadInvoice(@Param('id') id: number, @Res() res: Response) {
+  const buffer = await this.invoiceService.generateInvoicePdf(id);
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename=invoice-${id}.pdf`);
+
+  res.end(buffer);
+}
+
+
   // ✅ NEW: Generate Invoice from Trip
   @Post('generate/:tripId')
   async generate(@Param('tripId') tripId: string) {
