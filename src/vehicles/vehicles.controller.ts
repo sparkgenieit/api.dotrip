@@ -49,13 +49,13 @@ export class VehiclesController {
 
   @Get("available")
   @Roles("ADMIN", "VENDOR")
-  getAvailableVehicles(@Query("typeId") typeId: string) {
-    const parsedId = parseInt(typeId);
-    if (isNaN(parsedId)) {
-      throw new BadRequestException("Invalid vehicle typeId");
-    }
-    return this.vehiclesService.findAvailableByType(parsedId);
-  }
+ getAvailableVehicles(
+  @Req() req: AuthRequest,
+  @Query('typeId') typeId: string,
+) {
+  const vendorUserId = req.user.id;
+  return this.vehiclesService.getAvailableVehicles(+typeId, vendorUserId); // ✅ fixed name
+}
 
   @Patch(":id")
   update(@Param("id") id: string, @Body() updateVehicleDto: UpdateVehicleDto) {

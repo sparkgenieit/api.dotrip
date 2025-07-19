@@ -33,23 +33,21 @@ export class VehiclesService {
     return vehicle;
   }
 
-  async findAvailableByType(typeId: number) {
-    return this.prisma.vehicle.findMany({
-      where: {
-        vehicleTypeId: typeId,
-        status: "available",
+async getAvailableVehicles(typeId: number, vendorUserId: number) {
+  return this.prisma.vehicle.findMany({
+    where: {
+      status: 'available',
+      vehicleTypeId: typeId,
+      vendor: {
+        userId: vendorUserId, // 🔒 filter by vendor user
       },
-      include: {
-        driver: {
-          select: {
-            id: true,
-            fullName: true,
-            phone: true,
-          },
-        },
-      },
-    });
-  }
+    },
+    include: {
+      driver: true,
+      vendor: true,
+    },
+  });
+}
 
   async create(
     dto: CreateVehicleDto,

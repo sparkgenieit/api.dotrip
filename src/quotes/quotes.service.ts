@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitQuoteDto } from './dto/submit-quote.dto';
 import { EmailService } from '../services/email.service';
+import { ForbiddenException } from '@nestjs/common';
 
 @Injectable()
 export class QuotesService {
@@ -123,17 +124,24 @@ async submitQuote(dto: SubmitQuoteDto, userId: number) {
     });
   }
 
-  async approveQuote(quoteId: number) {
-    const quote = await this.prisma.quote.update({
-      where: { id: quoteId },
-      data: { approved: true },
-    });
-
-    await this.prisma.booking.update({
-      where: { id: quote.bookingId },
-      data: { vendorId: quote.vendorId },
-    });
-
-    return { success: true };
+async approveQuote(quoteId: number, user: any) {
+  // ✅ Role check
+  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+    throw new ForbiddenException('Only admin can approve quotes');
   }
+
+  // ✅ Approve the quote
+  const quote = await this.prisma.quote.update({
+    where: { id: quoteId },
+    data: { approved: true },
+  });
+
+  // ✅ Update booking with vendorId
+  await this.prisma.booking.update({
+    where: { id: quote.bookingId },
+    data: { vendorId: quote.vendorId },
+  });
+
+  return { success: true };
+}
 }
