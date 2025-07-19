@@ -46,10 +46,10 @@ export class QuotesController {
     return this.quotesService.getQuotesForBooking(+bookingId);
   }
 
-  @Post('approve')
-approve(@Body() body: { quoteId: number }) {
-  console.log('Received body:', body); // ✅ Should show quoteId
-  return this.quotesService.approveQuote(body.quoteId);
+@Post('approve')
+approve(@Body() body: { quoteId: number }, @Req() req: AuthRequest) {
+  console.log('Received body:', body);
+  return this.quotesService.approveQuote(body.quoteId, req.user);
 }
 
 }

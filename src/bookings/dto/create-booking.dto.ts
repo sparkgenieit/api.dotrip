@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsDateString, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsDateString, IsEnum, IsOptional } from 'class-validator';
 
 export class CreateBookingDto {
   @IsNumber()
@@ -30,4 +30,12 @@ export class CreateBookingDto {
 
   @IsNotEmpty()
   status: string;
+  
+  @IsNumber()
+  @IsOptional()
+  numPersons?: number;
+
+  @IsNumber()
+  @IsOptional()
+  numVehicles?: number;
 }

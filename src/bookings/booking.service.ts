@@ -17,6 +17,8 @@ export class BookingService {
       tripTypeId,
       vehicleTypeId,
       fare,
+      numPersons   = 1,            // ✅ new ‑ default 1
+      numVehicles  = 1,            // ✅ new ‑ default 1
     } = dto;
 
     const user = await this.prisma.user.findFirst({ where: { phone } });
@@ -65,6 +67,8 @@ export class BookingService {
         toCityId,
         tripTypeId,
         fare,
+        numPersons,     // ✅ now saved
+        numVehicles,    // ✅ now saved
         status: 'PENDING',
       },
     });
@@ -84,6 +88,7 @@ export class BookingService {
         where: { approved: true },
         select: { id: true },
       },
+      trips: true, // ✅ Include assigned trips here
       },
     });
   }
@@ -103,6 +108,7 @@ export class BookingService {
         where: { approved: true },
         select: { id: true },
       },
+      trips: true, // ✅ Include assigned trips here
       },
     });
   }
@@ -111,6 +117,33 @@ export class BookingService {
     await this.findOne(id);
     return this.prisma.booking.update({ where: { id }, data });
   }
+
+async getAssignableVehicles(vehicleTypeId: number, user: { id: number; role: string }) {
+  let vendorId: number | undefined;
+
+  if (user.role === 'VENDOR') {
+    const vendor = await this.prisma.vendor.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+
+    if (!vendor) throw new NotFoundException('Vendor not found for user');
+    vendorId = vendor.id;
+  }
+
+  return this.prisma.vehicle.findMany({
+    where: {
+      vehicleTypeId,
+      status: 'available',
+      ...(vendorId ? { vendorId } : {}), // ✅ filter by vendorId if it's a vendor
+    },
+    include: {
+      driver: {
+        include: { user: true },
+      },
+    },
+  });
+}
 
   async remove(id: number) {
     await this.findOne(id);
