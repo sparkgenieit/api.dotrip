@@ -106,15 +106,20 @@ export class InvoiceService {
 
 
   async generateInvoicePdf(id: number): Promise<Buffer> {
-    const invoice = await this.getInvoiceById(id);
+  const invoice = await this.getInvoiceById(id);
 
-    const doc = new PDFDocument();
-    const stream = new Readable();
-    const buffers: any[] = [];
+  const doc = new PDFDocument();
+  const buffers: Buffer[] = [];
 
-    doc.on('data', buffers.push.bind(buffers));
-    doc.on('end', () => stream.push(null));
+  return await new Promise((resolve) => {
+    // ✅ Must attach listeners BEFORE writing
+    doc.on('data', (chunk) => buffers.push(chunk));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      resolve(pdfBuffer);
+    });
 
+    // ✅ Generate PDF content after listeners are attached
     doc.fontSize(20).text(`Invoice #${invoice.invoiceNumber}`, { align: 'center' });
     doc.moveDown();
     doc.text(`Customer: ${invoice.user?.name}`);
@@ -126,12 +131,7 @@ export class InvoiceService {
     doc.text(`Admin Commission: ₹${invoice.adminCommission}`);
     doc.text(`Total Amount: ₹${invoice.totalAmount}`);
     doc.end();
+  });
+}
 
-    return await new Promise((resolve) => {
-      doc.on('end', () => {
-        const pdfBuffer = Buffer.concat(buffers);
-        resolve(pdfBuffer);
-      });
-    });
-  }
 }

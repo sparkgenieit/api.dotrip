@@ -51,7 +51,7 @@ model User {
   bookings     Booking[]     @relation("UserBookings")
   trips        Trip[]        @relation("UserTrips")
   addressBooks AddressBook[] @relation("UserAddressBooks")
-  invoices  Invoice[] 
+  invoices     Invoice[]
 }
 
 model Vendor {
@@ -69,7 +69,8 @@ model Vendor {
   earnings Earnings[] @relation("VendorEarnings")
   Booking  Booking[]
   Quote    Quote[]
-  invoices  Invoice[] 
+  invoices Invoice[]
+
   @@map("vendors")
 }
 
@@ -94,9 +95,18 @@ model Vehicle {
   driverOwnerId Int?
   driverOwner   Driver? @relation(fields: [driverOwnerId], references: [id])
 
-  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
-  driver      Driver[]    @relation("VehicleToDriver")
-  trips       Trip[]      @relation("VehicleTrips")
+  vehicleType  VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  priceId      Int        @default(10)
+  vehiclePrice Price       @relation(fields: [priceId], references: [id])
+  driver       Driver[]    @relation("VehicleToDriver")
+  trips        Trip[]      @relation("VehicleTrips")
+}
+
+model Price {
+  id        Int       @id @default(autoincrement())
+  priceType String //peakHour surge normal
+  price     Float
+  vehicles  Vehicle[]
 }
 
 // ✅ Updated Prisma Schema for Driver model with new UI fields
@@ -273,7 +283,7 @@ model Trip {
   vehicle  Vehicle   @relation("VehicleTrips", fields: [vehicleId], references: [id])
   vendor   Vendor    @relation("VendorTrips", fields: [vendorId], references: [id])
   Feedback Feedback?
-  invoice  Invoice?  // ✅ NEW: back reference from Trip to Invoice (one-to-one)
+  invoice  Invoice? // ✅ NEW: back reference from Trip to Invoice (one-to-one)
 }
 
 model Earnings {
@@ -287,8 +297,8 @@ model Earnings {
 }
 
 model Feedback {
-  id       Int @id @default(autoincrement())
-  tripId   Int @unique
+  id       Int  @id @default(autoincrement())
+  tripId   Int  @unique
   riderId  Int
   driverId Int? // ✅ made optional
 
@@ -298,8 +308,8 @@ model Feedback {
   comment       String
   feedbackTime  DateTime? @default(now())
 
-  trip   Trip   @relation(fields: [tripId], references: [id])
-  rider  User   @relation(fields: [riderId], references: [id])
+  trip   Trip    @relation(fields: [tripId], references: [id])
+  rider  User    @relation(fields: [riderId], references: [id])
   driver Driver? @relation(fields: [driverId], references: [id]) // ✅ optional relation
 }
 
@@ -313,7 +323,7 @@ model Invoice {
   pdfUrl           String?
   createdAt        DateTime @default(now())
 
-  tripId   Int      @unique
+  tripId   Int @unique
   vendorId Int
   userId   Int
 
