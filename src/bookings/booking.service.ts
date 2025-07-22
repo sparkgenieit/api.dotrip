@@ -149,4 +149,21 @@ async getAssignableVehicles(vehicleTypeId: number, user: { id: number; role: str
     await this.findOne(id);
     return this.prisma.booking.delete({ where: { id } });
   }
+
+  async markAsConfirmedIfTripsExist(bookingId: number) {
+  const booking = await this.prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { trips: true },
+  });
+
+  if (booking && booking.trips.length > 0 && booking.status === 'PENDING') {
+    return this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: 'CONFIRMED' },
+    });
+  }
+
+  return booking;
+}
+
 }
