@@ -16,6 +16,7 @@ export class VehiclesService {
       include: {
         vendor: true,
         driver: true,
+        vehicleType:true,
       },
     });
   }
