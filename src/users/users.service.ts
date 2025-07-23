@@ -5,6 +5,7 @@ import { randomBytes } from 'crypto';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ForbiddenException } from '@nestjs/common';
 
 @Injectable()
 export class UsersService {
@@ -30,6 +31,7 @@ export class UsersService {
         password: hashedPassword,
         phone:    dto.phone,
         role:     dto.role,
+       
       },
     });
   }
@@ -46,9 +48,11 @@ export class UsersService {
 
   async update(id: number, dto: UpdateUserDto) {
     const updateData: any = {
-      name:  dto.name,
-      phone: dto.phone,
-      role:  dto.role,
+      name:   dto.name,
+      phone:  dto.phone,
+      role:   dto.role,
+      age:    dto.age,
+      gender: dto.gender,
     };
     if (dto.password) {
       updateData.password = await bcrypt.hash(dto.password, 10);
@@ -95,5 +99,46 @@ async findByPhone(phone: string) {
   });
 }
 
+async findUserById(id: number) {
+  return this.prisma.user.findUnique({ where: { id } });
+}
+
+async updateUser(userId: number, dto: UpdateUserDto) {
+  const updateFields: any = {};
+
+  if (dto.name) updateFields.name = dto.name;
+  if (dto.email) updateFields.email = dto.email;
+  if (dto.phone) updateFields.phone = dto.phone;
+  if (dto.age !== undefined) updateFields.age = dto.age;
+  if (dto.gender) updateFields.gender = dto.gender;
+
+  return this.prisma.user.update({
+    where: { id: userId },
+    data: dto,
+  });
+}
+
+async deleteUser(id: number) {
+    return this.prisma.user.delete({
+      where: { id },
+    });
+  }
+
+  async changePassword(userId: number, currentPassword: string, newPassword: string) {
+  const user = await this.prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new ForbiddenException('User not found');
+
+  const passwordValid = await bcrypt.compare(currentPassword, user.password);
+  if (!passwordValid) throw new ForbiddenException('Current password is incorrect');
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await this.prisma.user.update({
+    where: { id: userId },
+    data: { password: hashedPassword },
+  });
+
+  return { message: 'Password changed successfully' };
+}
 
 }

@@ -8,11 +8,13 @@ import {
   IsEnum,
   ValidateNested,
   IsArray,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Role } from '../role.enum';
 
 import { CreateAddressBookDto } from '../address-book/dto/create-address-book.dto';
+
 
 export class CreateUserDto {
   @IsString()
@@ -29,6 +31,14 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   phone?: string;
+  
+  @IsOptional()
+  @IsNumber()
+  age?: number;        // ✅ NEW
+
+  @IsOptional()
+  @IsString()
+  gender?: string;     // ✅ NEW
 
   /** which Role this user has (defaults to RIDER if omitted) */
   @IsOptional()
