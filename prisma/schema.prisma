@@ -78,7 +78,7 @@ model Vehicle {
   id                 Int       @id @default(autoincrement())
   name               String
   model              String
-  image              String
+  image              Json    
   capacity           Int
   registrationNumber String    @unique
   price              Int       @default(0)
@@ -119,6 +119,8 @@ model Driver {
   licenseExpiry DateTime
   isPartTime    Boolean  @default(false)
   isAvailable   Boolean  @default(true)
+  licenseImage  Json // ✅ NEW
+  rcImage       Json // ✅ NEW
 
   assignedVehicleId Int?     @unique
   assignedVehicle   Vehicle? @relation("VehicleToDriver", fields: [assignedVehicleId], references: [id]) // ✅ Backward link

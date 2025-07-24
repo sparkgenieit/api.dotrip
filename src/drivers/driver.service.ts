@@ -19,6 +19,8 @@ export class DriverService {
         licenseExpiry: new Date(dto.licenseExpiry),
         isPartTime: dto.isPartTime ?? false,
         isAvailable: dto.isAvailable ?? true,
+        licenseImage: dto.licenseImage,
+        rcImage: dto.rcImage,
 
         vendor: dto.vendorId
           ? {
