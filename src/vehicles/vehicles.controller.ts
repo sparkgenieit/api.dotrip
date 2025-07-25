@@ -1,3 +1,4 @@
+import { Express } from 'express';
 import {
   Controller,
   Get,
@@ -18,17 +19,51 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 import { AuthRequest } from "../types/auth-request";
+import { UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import { join } from 'path';
+
+  const multerVehicleStorage = diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = join(process.cwd(), 'uploads', 'vehicles');
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${file.originalname}`;
+    cb(null, uniqueName);
+  },
+});
 
 @Controller("vehicles")
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 
-  @Post()
-  @Roles("ADMIN", "VENDOR", "DRIVER")
-  create(@Body() createVehicleDto: CreateVehicleDto, @Req() req: AuthRequest) {
-    return this.vehiclesService.create(createVehicleDto, req.user);
+@Post()
+@Roles("ADMIN", "VENDOR", "DRIVER")
+@UseInterceptors(
+  FileFieldsInterceptor([{ name: 'images', maxCount: 5 }], {
+    storage: multerVehicleStorage,
+  }),
+)
+create(
+  @Body() createVehicleDto: CreateVehicleDto,
+  @Req() req: AuthRequest,
+  @UploadedFiles()
+files: {
+    images?: any[];
+  },
+) {
+  if (files?.images?.length) {
+    createVehicleDto.image = files.images.map(file => `uploads/vehicles/${file.filename}`);
   }
+
+  return this.vehiclesService.create(createVehicleDto, req.user);
+}
+
 
   @Get()
   @Roles("ADMIN", "VENDOR", "DRIVER")
@@ -57,13 +92,31 @@ export class VehiclesController {
   return this.vehiclesService.getAvailableVehicles(+typeId, vendorUserId); // ✅ fixed name
 }
 
-  @Patch(":id")
-  update(@Param("id") id: string, @Body() updateVehicleDto: UpdateVehicleDto) {
-    return this.vehiclesService.update(+id, updateVehicleDto);
+@Patch(":id")
+@UseInterceptors(
+  FileFieldsInterceptor([{ name: 'images', maxCount: 5 }], {
+    storage: multerVehicleStorage,
+  }),
+)
+update(
+  @Param("id") id: string,
+  @Body() updateVehicleDto: UpdateVehicleDto,
+  @UploadedFiles()
+files: {
+    images?: any[];
+  },
+) {
+  if (files?.images?.length) {
+    updateVehicleDto.image = files.images.map(file => `uploads/vehicles/${file.filename}`);
   }
+
+  return this.vehiclesService.update(+id, updateVehicleDto);
+}
+
 
   @Delete(":id")
   remove(@Param("id") id: string) {
     return this.vehiclesService.remove(+id);
   }
+
 }

@@ -1,4 +1,12 @@
-import { IsString, IsInt, IsOptional, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsInt,
+  IsOptional,
+  IsDateString,
+  IsString as IsStringArray,
+  IsArray,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateVehicleDto {
   @IsString()
@@ -7,21 +15,27 @@ export class CreateVehicleDto {
   @IsString()
   model: string;
 
-  @IsString()
-  image: string;
+  @IsArray()
+  @IsStringArray({ each: true })
+  @IsOptional()
+  image: string[];
 
+  @Transform(({ value }) => parseInt(value, 10))
   @IsInt()
   capacity: number;
 
+  @Transform(({ value }) => parseInt(value, 10))
   @IsInt()
   price: number;
 
+  @Transform(({ value }) => parseInt(value, 10))
   @IsInt()
   originalPrice: number;
 
   @IsString()
   registrationNumber: string;
 
+  @Transform(({ value }) => parseInt(value, 10))
   @IsInt()
   vehicleTypeId: number;
 
@@ -29,6 +43,7 @@ export class CreateVehicleDto {
   @IsString()
   status?: string;
 
+  @Transform(({ value }) => parseInt(value, 10))
   @IsOptional()
   @IsInt()
   comfortLevel?: number;
@@ -37,6 +52,7 @@ export class CreateVehicleDto {
   @IsDateString()
   lastServicedDate?: string;
 
+  @Transform(({ value }) => parseInt(value, 10))
   @IsOptional()
   @IsInt()
   vendorId?: number;

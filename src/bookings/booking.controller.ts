@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req
+  Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, ParseIntPipe
 } from '@nestjs/common';
 import { BookingService } from './booking.service';
 import { CreateBookingPublicDto } from './dto/create-booking-public.dto';
@@ -45,4 +45,10 @@ create(@Body() body: CreateBookingPublicDto) {
 ) {
   return this.bookingService.getAssignableVehicles(+vehicleTypeId, req.user);
 }
+
+  @Patch(':id/confirm-if-assigned')
+  async confirmIfAssigned(@Param('id', ParseIntPipe) id: number) {
+  return this.bookingService.markAsConfirmedIfTripsExist(id);
+}
+
 }
