@@ -1,32 +1,62 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Delete,
+  UseGuards,
+  Req,
+  NotFoundException,
+} from '@nestjs/common';
 import { AddressBookService } from './address-book.service';
 import { CreateAddressBookDto } from './dto/create-address-book.dto';
 import { UpdateAddressBookDto } from './dto/update-address-book.dto';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { AuthRequest } from '../../types/auth-request';
 
-@Controller('addresses')
+
+@UseGuards(JwtAuthGuard)
+@Controller('address-book')
 export class AddressBookController {
-  constructor(private service: AddressBookService) {}
+  constructor(private readonly service: AddressBookService) {}
 
-  @Post() create(@Body() dto: CreateAddressBookDto) { return this.service.create(dto); }
-
-  @Get('user/:userId') findAll(@Param('userId') userId: string) {
-    return this.service.findAllForUser(+userId);
+  // ✅ Create new address for logged-in user
+  @Post()
+  async create(@Req() req: AuthRequest, @Body() dto: CreateAddressBookDto) {
+    return this.service.create({ ...dto, userId: req.user.id });
   }
-// GET a single address by its ID
+
+  // ✅ Get all addresses for current user
+  @Get('me')
+  async findAllForMe(@Req() req: AuthRequest) {
+    return this.service.findAllForUser(req.user.id);
+  }
+
+  // ✅ Get a single address by ID
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const address = await this.service.findOne(+id);
     if (!address) {
-      // If not found, throw a 404
       throw new NotFoundException(`Address with ID ${id} not found`);
     }
     return address;
   }
 
-  @Put(':id') update(@Param('id') id: string, @Body() dto: UpdateAddressBookDto) {
-    return this.service.update(+id, dto);
+  // ✅ Update address (ensure user check is done in service)
+  @Put(':id')
+  async update(
+    @Param('id') id: string,
+    @Req() req: AuthRequest,
+    @Body() dto: UpdateAddressBookDto
+  ) {
+    return this.service.update(+id, dto, req.user.id); // service must verify user
   }
 
-  @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(+id); }
+  // ✅ Delete address (secure with user check)
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Req() req: AuthRequest) {
+    return this.service.remove(+id, req.user.id); // secure delete
+  }
 }

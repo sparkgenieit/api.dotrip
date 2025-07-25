@@ -1,12 +1,15 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards,Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
+import { Request } from '@nestjs/common';
+import { AuthRequest } from "../types/auth-request";
+
 
 @UseGuards(JwtAuthGuard)
-@Controller('admin/users')
+@Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -16,23 +19,15 @@ export class UsersController {
     return this.usersService.create(dto);
   }
 
+  
+
   @Get()
   @Roles('SUPER_ADMIN', 'ADMIN')
   findAll() {
     return this.usersService.findAll();
   }
 
-  @Get(':id')
-  @Roles('SUPER_ADMIN', 'ADMIN')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
-  }
-
-  @Patch(':id')
-  @Roles('SUPER_ADMIN')
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(+id, dto);
-  }
+  
 
   @Delete(':id')
   @Roles('SUPER_ADMIN')
@@ -74,6 +69,27 @@ async checkPhone(@Body('phone') phone: string) {
     },
     addresses: user.addressBooks,
   };
+}
+
+@Get('/me')
+getProfile(@Req() req: AuthRequest) {
+  
+  return this.usersService.findOne(req.user.id);
+}
+
+
+@Patch('/me')
+updateProfile(@Body() dto: UpdateUserDto, @Param() params,@Req() req: AuthRequest) {
+  return this.usersService.update(req.user.id, dto);
+}
+
+@Post('change-password')
+   async changePassword(
+ @Req() req: AuthRequest,
+  @Body('currentPassword') currentPassword: string,
+  @Body('newPassword') newPassword: string
+  ) {
+  return this.usersService.changePassword(req.user.id, currentPassword, newPassword);
 }
 
 

@@ -2,6 +2,7 @@ import { IsInt, IsEnum, IsString, IsNotEmpty, IsOptional } from 'class-validator
 import { AddressType } from '../address-book.enum';
 
 export class CreateAddressBookDto {
+  @IsOptional()
   @IsInt()
   userId: number;
 
