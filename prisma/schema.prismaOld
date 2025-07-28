@@ -22,17 +22,17 @@ enum Role {
   SUPER_ADMIN
 }
 
+enum messageStatus {
+  READ
+  UNREAD
+}
+
 enum AddressType {
   HOME
   OFFICE
   OTHER
   PICKUP
   DROP
-}
-
-enum messageStatus {
-  READ
-  UNREAD
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ model Vehicle {
   id                 Int       @id @default(autoincrement())
   name               String
   model              String
-  image              Json    
+  image              String
   capacity           Int
   registrationNumber String    @unique
   price              Int       @default(0)
@@ -126,8 +126,6 @@ model Driver {
   licenseExpiry DateTime
   isPartTime    Boolean  @default(false)
   isAvailable   Boolean  @default(true)
-  licenseImage  Json // ✅ NEW
-  rcImage       Json // ✅ NEW
 
   assignedVehicleId Int?     @unique
   assignedVehicle   Vehicle? @relation("VehicleToDriver", fields: [assignedVehicleId], references: [id]) // ✅ Backward link
