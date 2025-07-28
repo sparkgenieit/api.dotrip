@@ -1,3 +1,4 @@
+
 import {
   Controller,
   Get,
@@ -5,11 +6,13 @@ import {
   Body,
   Param,
   Put,
+  Patch,
   Delete,
   Req,
   UseGuards,
   UnauthorizedException,
   BadRequestException,
+  NotFoundException, // 🆕 ADDED
 } from '@nestjs/common';
 import { TripsService } from './trips.service';
 import { UpdateTripDto } from './dto/update-trip.dto';
@@ -18,6 +21,9 @@ import { AuthRequest } from '../types/auth-request';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { TripAssistanceDto } from './dto/trip-assistance.dto';
+import { ParseIntPipe } from '@nestjs/common';
+import { TripAssistanceReplyDto } from './dto/trip-assistance-reply.dto';
 
 @Controller('trips')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -73,17 +79,21 @@ export class TripsController {
   }
 
   @Get()
-  @Roles('ADMIN', 'VENDOR')
-  findAll(@Req() req: AuthRequest) {
-    const { role, vendorId } = req.user;
-    if (role === 'VENDOR') return this.tripsService.findAllByVendor(vendorId);
-    return this.tripsService.findAll();
+@Roles('ADMIN', 'VENDOR', 'DRIVER') // ✅ Added DRIVER role
+findAll(@Req() req: AuthRequest) {
+  const { role, vendorId, driverId } = req.user;
+
+  if (role === 'VENDOR') {
+    return this.tripsService.findAllByVendor(vendorId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tripsService.findOne(+id);
+  if (role === 'DRIVER') {
+    return this.tripsService.findAllByDriver(driverId); // ✅ Must implement this
   }
+
+  return this.tripsService.findAll(); // Admin fallback
+}
+
 
   @Put(':id')
   update(@Param('id') id: string, @Body() updateTripDto: UpdateTripDto) {
@@ -94,4 +104,51 @@ export class TripsController {
   remove(@Param('id') id: string) {
     return this.tripsService.remove(+id);
   }
+
+  // 🚨 Submit new assistance (Driver)
+@Post('assistance')
+@Roles('DRIVER')
+async reportAssistance(@Body() dto: TripAssistanceDto) {
+  return this.tripsService.reportAssistance(dto);
+}
+
+
+  // ✅ New endpoint: Get all assistance requests
+  @Get('assistance/all')
+  @Roles('VENDOR', 'ADMIN')
+  async getAllAssistanceRequests() {
+    return this.tripsService.getAllAssistance();
+  }
+
+  // 🔍 Get assistance for one trip
+@Get(':id/assistance')
+@Roles('DRIVER', 'VENDOR', 'ADMIN')
+async getTripAssistance(@Param('id', ParseIntPipe) tripId: number, @Req() req: AuthRequest) {
+  return this.tripsService.getTripAssistance(tripId, req.user);
+}
+
+  
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.tripsService.findOne(+id);
+  }
+
+  // ✅ New endpoint: Reply to a trip assistance
+@Patch(':id/assistance/reply')
+@UseGuards(JwtAuthGuard)
+async sendTripAssistanceReply(
+  @Param('id', ParseIntPipe) id: number,
+  @Body('reply') reply: string,
+  @Req() req: AuthRequest, // ✅ Use type-safe user-aware request
+) {
+  if (!reply || reply.trim().length === 0) {
+    throw new BadRequestException('Reply cannot be empty');
+  }
+  return this.tripsService.replyToTripAssistance(id, reply, req.user);
+}
+
+
+  
+
+
 }
