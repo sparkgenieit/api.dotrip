@@ -286,6 +286,8 @@ model Trip {
   vendor   Vendor    @relation("VendorTrips", fields: [vendorId], references: [id])
   Feedback Feedback?
   invoice  Invoice? // ✅ NEW: back reference from Trip to Invoice (one-to-one)
+  assistances TripAssistance[]
+
 }
 
 model Earnings {
@@ -332,4 +334,17 @@ model Invoice {
   trip   Trip   @relation(fields: [tripId], references: [id])
   vendor Vendor @relation(fields: [vendorId], references: [id])
   user   User   @relation(fields: [userId], references: [id])
+}
+
+model TripAssistance {
+  id          Int      @id @default(autoincrement())
+  tripId      Int
+  location    String
+  subject     String
+  description String
+  createdAt   DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("trip_assistances")
 }

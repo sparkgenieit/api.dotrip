@@ -53,6 +53,6 @@
     "typescript": "^5.1.6"
   },
   "prisma": {
-    "seed": "ts-node --transpile-only prisma/seedaddress.ts"
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   }
 }
