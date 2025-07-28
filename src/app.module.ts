@@ -24,6 +24,7 @@ import { QuotesModule } from './quotes/quotes.module';
 import { GlobalModule } from './global.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module'; // ✅ NEW: WhatsApp module
 import { InvoiceModule } from './invoice/invoice.module'; // ✅ NEW: Import Feedback Module
+import { DriverUpdatesModule } from './DriverUpdate/driver-updates.module'; // ✅ Adjust path if needed
 
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
@@ -49,6 +50,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
       GlobalModule,   // ✅ Register global email
     WhatsAppModule,      // ✅ Register WhatsApp messaging
      InvoiceModule,
+     DriverUpdatesModule,
   ],
   providers: [
     {
