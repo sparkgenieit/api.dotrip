@@ -141,6 +141,8 @@ model Driver {
   trips    Trip[]
   Feedback Feedback[]
   Vehicle  Vehicle[]
+  driverUpdates DriverUpdate[] // ✅ new
+
 }
 
 model VehicleType {
@@ -293,8 +295,9 @@ model Trip {
   vendor   Vendor    @relation("VendorTrips", fields: [vendorId], references: [id])
   Feedback Feedback?
   invoice  Invoice? // ✅ NEW: back reference from Trip to Invoice (one-to-one)
-  assistances TripAssistance[]
 
+  assistances TripAssistance[]
+  driverUpdates DriverUpdate[] // ✅ new
 }
 
 model Earnings {
@@ -344,16 +347,30 @@ model Invoice {
 }
 
 model TripAssistance {
-  id          Int      @id @default(autoincrement())
-  tripId      Int
-  location    String
-  subject     String
-  description String
-  reply       String?  // ✅ New field
-  messageStatus      messageStatus?  @default(UNREAD)
-  createdAt   DateTime @default(now())
+  id             Int            @id @default(autoincrement())
+  tripId         Int
+  location       String
+  subject        String
+  description    String
+  reply          String?
+  messageStatus  messageStatus? @default(UNREAD)
+  createdAt      DateTime       @default(now())
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@map("trip_assistances")
 }
+
+model DriverUpdate {
+  id            Int      @id @default(autoincrement())
+  driverId      Int
+  tripId        Int
+  latitude      Float
+  longitude     Float
+  statusMessage String
+  createdAt     DateTime @default(now())
+
+  driver Driver @relation(fields: [driverId], references: [id])
+  trip   Trip   @relation(fields: [tripId], references: [id])
+}
+
