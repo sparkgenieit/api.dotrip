@@ -65,4 +65,40 @@ export class TripsService {
   async remove(id: number) {
     return this.prisma.trip.delete({ where: { id } });
   }
+
+  async findAllByDriver(driverId: number) {
+  return this.prisma.trip.findMany({
+    where: { driverId },
+    include: {
+      booking: true,
+      rider: true,
+      driver: true,
+      vehicle: true,
+      vendor: true,
+      Feedback: true,
+    },
+  });
+}
+
+async reportAssistance(dto: any) {
+  return this.prisma.tripAssistance.create({ data: dto });
+}
+
+async getAllAssistance() {
+  return this.prisma.tripAssistance.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+async getTripAssistance(tripId: number) {
+  return this.prisma.tripAssistance.findFirst({ where: { tripId } });
+}
+
+async replyToTripAssistance(id: number, reply: string) {
+  return this.prisma.tripAssistance.update({
+    where: { id },
+    data: { reply },
+  });
+}
+
 }

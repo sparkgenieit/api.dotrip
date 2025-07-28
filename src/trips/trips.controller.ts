@@ -124,7 +124,7 @@ async reportAssistance(@Body() dto: TripAssistanceDto) {
 @Get(':id/assistance')
 @Roles('DRIVER', 'VENDOR', 'ADMIN')
 async getTripAssistance(@Param('id', ParseIntPipe) tripId: number, @Req() req: AuthRequest) {
-  return this.tripsService.getTripAssistance(tripId, req.user);
+  return this.tripsService.getTripAssistance(tripId);
 }
 
   
@@ -144,7 +144,7 @@ async sendTripAssistanceReply(
   if (!reply || reply.trim().length === 0) {
     throw new BadRequestException('Reply cannot be empty');
   }
-  return this.tripsService.replyToTripAssistance(id, reply, req.user);
+  return this.tripsService.replyToTripAssistance(id, reply);
 }
 
 

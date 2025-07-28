@@ -1,203 +1,163 @@
-import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
-import fs from 'fs';
-import path from 'path';
-
+import { PrismaClient, Role } from '@prisma/client';
 const prisma = new PrismaClient();
 
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
 async function main() {
-  const password = await bcrypt.hash('123123', 10);
+  // Master Data
+  const [city1, city2] = await Promise.all([
+    prisma.city.create({
+      data: { name: 'Hyderabad', state: 'Telangana', lat: 17.385, lng: 78.4867 },
+    }),
+    prisma.city.create({
+      data: { name: 'Bangalore', state: 'Karnataka', lat: 12.9716, lng: 77.5946 },
+    }),
+  ]);
 
-  // ✅ Seed users
-  await prisma.user.createMany({
-    data: [
-      { name: 'Admin',  email: 'admin@dotrip.net',  password, role: 'ADMIN' },
-      { name: 'User',   email: 'user@dotrip.net',   password, role: 'RIDER' },
-      { name: 'Driver', email: 'driver@dotrip.net', password, role: 'DRIVER' },
-      { name: 'Vendor', email: 'vendor@dotrip.net', password, role: 'VENDOR' }
-    ],
-    skipDuplicates: true
+  await prisma.cityDistance.create({
+    data: {
+      fromCityId: city1.id,
+      toCityId: city2.id,
+      distanceKm: 570,
+      fromCityName: city1.name,
+      toCityName: city2.name,
+    },
   });
 
-  // ✅ Seed vehicle types
-  await prisma.vehicleType.createMany({
-    data: [
-      { name: "Sedan" },
-      { name: "SUV" },
-      { name: "Hatchback" },
-      { name: "Tempo Traveller" }
-    ],
-    skipDuplicates: true
+  const vehicleType = await prisma.vehicleType.create({
+    data: { name: 'SUV', estimatedRatePerKm: 12, baseFare: 100, seatingCapacity: 6 },
   });
 
-  // ✅ Get first vehicle type
-  const vehicleTypes = await prisma.vehicleType.findMany();
-  const firstVehicleTypeId = vehicleTypes.length > 0
-    ? vehicleTypes[0].id
-    : (await prisma.vehicleType.create({ data: { name: "Default Type" } })).id;
+  const tripType = await prisma.tripType.create({
+    data: { label: 'One Way', slug: 'one-way' },
+  });
 
-  // ✅ Seed vehicles
-  await prisma.vehicle.createMany({
-    data: [
-      {
-        name: "Innova Crysta",
-        model: "2.4 ZX",
-        image: "https://example.com/innova.jpg",
-        capacity: 7,
-        registrationNumber: "TS123456",
-        price: 1200,
-        originalPrice: 1400,
-        comfortLevel: 4,
-        vehicleTypeId: firstVehicleTypeId
+  const price = await prisma.price.create({
+    data: { priceType: 'normal', price: 15.5 },
+  });
+
+  const admin = await prisma.user.create({
+    data: {
+      name: 'Super Admin',
+      email: 'admin@example.com',
+      password: 'securepassword',
+      role: 'SUPER_ADMIN',
+    },
+  });
+
+  const [vendor1, vendor2] = await Promise.all([
+    prisma.vendor.create({
+      data: {
+        name: 'Skyline Travels',
+        companyReg: 'SKY001',
+        vendor: { connect: { id: admin.id } },
       },
-      {
-        name: "Dzire",
-        model: "VXI",
-        image: "https://example.com/dzire.jpg",
-        capacity: 5,
-        registrationNumber: "TS654321",
-        price: 900,
-        originalPrice: 1100,
-        comfortLevel: 3,
-        vehicleTypeId: firstVehicleTypeId
-      }
-    ],
-    skipDuplicates: true
-  });
+    }),
+    prisma.vendor.create({
+      data: {
+        name: 'City Riders',
+        companyReg: 'CITY002',
+        vendor: { connect: { id: admin.id } },
+      },
+    }),
+  ]);
 
-  // ✅ Seed trip types with slugs
-  await prisma.tripType.createMany({
-    data: [
-      { label: "One Way",          slug: "one-way" },
-      { label: "Round Trip",       slug: "round-trip" },
-      { label: "Hourly Rental",    slug: "hourly-rental" },
-      { label: "Airport Transfer", slug: "airport-transfer" },
-      { label: "Outstation",       slug: "outstation" },
-      { label: "Local City",       slug: "local-city" }
-    ],
-    skipDuplicates: true
-  });
-
-  // ✅ Seed top cities from cities.json
-  const filePath = path.join(__dirname, 'cities.json');
-  const rawData = fs.readFileSync(filePath, 'utf-8');
-
-  const allCities = JSON.parse(rawData) as {
-    city: string;
-    state: string;
-    population: number;
-    latitude: number;
-    longitude: number;
-  }[];
-
-  const topCities = allCities
-    .filter((entry) => typeof entry.population === 'number')
-    .sort((a, b) => b.population - a.population)
-    .slice(0, 100);
-
-  console.log(`🚀 Seeding Top ${topCities.length} Cities...`);
-
-  let cityInserted = 0;
-  let citySkipped = 0;
-
-  for (const entry of topCities) {
-    try {
-      await prisma.city.create({
+  // Create 10 Vehicles (5 each for 2 vendors)
+  const vehicles = await Promise.all(
+    Array.from({ length: 10 }).map((_, i) =>
+      prisma.vehicle.create({
         data: {
-          name: entry.city,
-          state: entry.state,
-          lat: entry.latitude,
-          lng: entry.longitude
-        }
-      });
-      console.log(`✅ Inserted City: ${entry.city}, ${entry.state}`);
-      cityInserted++;
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('Unique constraint')) {
-        console.warn(`⏭️ Skipping duplicate: ${entry.city}, ${entry.state}`);
-        citySkipped++;
-      } else {
-        console.error(`❌ Failed to insert city: ${entry.city}, ${entry.state}`, error);
-      }
-    }
-  }
+          name: `Vehicle ${i + 1}`,
+          model: `Model ${i + 1}`,
+          image: 'https://via.placeholder.com/150',
+          capacity: 4 + (i % 3),
+          registrationNumber: `KA01AB12${i + 10}`,
+          price: 2000 + i * 100,
+          originalPrice: 2200 + i * 100,
+          status: 'available',
+          comfortLevel: (i % 5) + 1,
+          lastServicedDate: new Date(),
+          vehicleTypeId: vehicleType.id,
+          vendorId: i < 5 ? vendor1.id : vendor2.id,
+          priceId: price.id,
+          createdBy: Role.VENDOR,
+        },
+      })
+    )
+  );
 
-  // ✅ Seed city distances (bidirectional)
-  const cities = await prisma.city.findMany({
-    select: { id: true, name: true, lat: true, lng: true },
-    orderBy: { id: 'asc' }
+  // Create 5 Drivers
+  const drivers = await Promise.all(
+    Array.from({ length: 5 }).map((_, i) =>
+      prisma.driver.create({
+        data: {
+          fullName: `Driver ${i + 1}`,
+          phone: `98765432${i + 10}`,
+          email: `driver${i + 1}@mail.com`,
+          licenseNumber: `LIC00${i + 1}`,
+          licenseExpiry: new Date('2030-12-31'),
+          isPartTime: i % 2 === 0,
+          isAvailable: true,
+          vendorId: i < 3 ? vendor1.id : vendor2.id,
+        },
+      })
+    )
+  );
+
+  // Create Rider (User) and AddressBook entries
+  const rider = await prisma.user.create({
+    data: {
+      name: 'Test Rider',
+      email: 'rider@example.com',
+      password: 'riderpass',
+      role: 'RIDER',
+      phone: '9000011111',
+    },
   });
 
-  console.log(`\n📏 Calculating distances between ${cities.length} cities...`);
-  let distanceInserted = 0;
-  let distanceSkipped = 0;
+  const pickupAddress = await prisma.addressBook.create({
+    data: {
+      userId: rider.id,
+      type: 'PICKUP',
+      address: '123 MG Road',
+      city: 'Hyderabad',
+      pinCode: '500001',
+    },
+  });
 
-  for (let i = 0; i < cities.length; i++) {
-    for (let j = i + 1; j < cities.length; j++) {
-      const from = cities[i];
-      const to = cities[j];
+  const dropAddress = await prisma.addressBook.create({
+    data: {
+      userId: rider.id,
+      type: 'DROP',
+      address: '456 Brigade Road',
+      city: 'Bangalore',
+      pinCode: '560001',
+    },
+  });
 
-      if (from.lat == null || from.lng == null || to.lat == null || to.lng == null) {
-        continue;
-      }
+  // Create Booking
+  const booking = await prisma.booking.create({
+    data: {
+      userId: rider.id,
+      vehicleTypeId: vehicleType.id,
+      pickupAddressId: pickupAddress.id,
+      dropAddressId: dropAddress.id,
+      pickupDateTime: new Date(Date.now() + 86400000),
+      fromCityId: city1.id,
+      toCityId: city2.id,
+      tripTypeId: tripType.id,
+      fare: 7500,
+      numPersons: 2,
+      numVehicles: 1,
+      bookingType: 'individual',
+      status: 'PENDING',
+    },
+  });
 
-      const distance = parseFloat(haversine(from.lat, from.lng, to.lat, to.lng).toFixed(2));
-
-      try {
-        await prisma.cityDistance.createMany({
-          data: [
-            {
-              fromCityId: from.id,
-              toCityId: to.id,
-              distanceKm: distance,
-              fromCityName: from.name,
-              toCityName: to.name
-            },
-            {
-              fromCityId: to.id,
-              toCityId: from.id,
-              distanceKm: distance,
-              fromCityName: to.name,
-              toCityName: from.name
-            }
-          ],
-          skipDuplicates: true
-        });
-
-        console.log(`📍 Inserted: ${from.name} ↔ ${to.name} = ${distance} km`);
-        distanceInserted += 2;
-      } catch (error) {
-        distanceSkipped += 2;
-        console.warn(`⏭️ Skipped duplicate or error: ${from.name} ↔ ${to.name}`);
-      }
-    }
-  }
-
-  console.log('\n✅ Seeding complete!');
-  console.log(`🌆 Cities → Inserted: ${cityInserted}, Skipped: ${citySkipped}`);
-  console.log(`📏 Distances → Inserted: ${distanceInserted}, Skipped: ${distanceSkipped}`);
+  console.log('✅ Seed completed successfully');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('❌ Seed failed:', e);
     process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .finally(() => prisma.$disconnect());

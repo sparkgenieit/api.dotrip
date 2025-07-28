@@ -39,7 +39,6 @@ async findAll() {
       },
       driver: true,
       vehicle: true,
-      assistances:true
     },
   });
 
