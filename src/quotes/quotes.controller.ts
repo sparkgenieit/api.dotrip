@@ -46,8 +46,10 @@ export class QuotesController {
     return this.quotesService.getQuotesForBooking(+bookingId);
   }
 
-  @Post('approve')
-  approveQuote(@Body() dto: ApproveQuoteDto) {
-    return this.quotesService.approveQuote(dto.quoteId);
-  }
+@Post('approve')
+approve(@Body() body: { quoteId: number }, @Req() req: AuthRequest) {
+  console.log('Received body:', body);
+  return this.quotesService.approveQuote(body.quoteId, req.user);
+}
+
 }

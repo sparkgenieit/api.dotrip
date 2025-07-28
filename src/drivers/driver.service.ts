@@ -19,6 +19,8 @@ export class DriverService {
         licenseExpiry: new Date(dto.licenseExpiry),
         isPartTime: dto.isPartTime ?? false,
         isAvailable: dto.isAvailable ?? true,
+        licenseImage: dto.licenseImage,
+        rcImage: dto.rcImage,
 
         vendor: dto.vendorId
           ? {
@@ -115,19 +117,19 @@ export class DriverService {
     return this.prisma.driver.update({
       where: { id },
       data: {
-        fullName: dto.name,
+        fullName: dto.fullName,
         phone: dto.phone,
         email: dto.email,
         licenseNumber: dto.licenseNumber,
-        licenseExpiry: new Date(dto.license_expiry),
-        isPartTime: dto.is_part_time ?? false,
-        isAvailable: dto.is_available ?? true,
+        licenseExpiry: new Date(dto.licenseExpiry),
+        isPartTime: dto.isPartTime ?? false,
+        isAvailable: dto.isAvailable ?? true,
         vendor: {
-          connect: { id: Number(dto.vendor_id) },
+          connect: { id: Number(dto.vendorId) },
         },
-        assignedVehicle: dto.assigned_vehicle_id
+        assignedVehicle: dto.assignedVehicleId
           ? {
-              connect: { id: Number(dto.assigned_vehicle_id) },
+              connect: { id: Number(dto.assignedVehicleId) },
             }
           : undefined,
       },

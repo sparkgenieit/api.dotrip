@@ -1,11 +1,53 @@
+// src/drivers/dto/update-driver.dto.ts
+import { IsOptional, IsString, IsBoolean, IsInt, IsDateString } from 'class-validator';
+import { Type } from 'class-transformer';
+
 export class UpdateDriverDto {
-  name?: string;
+  @IsOptional()
+  @IsString()
+  fullName?: string;
+
+  @IsOptional()
+  @IsString()
   phone?: string;
+
+  @IsOptional()
+  @IsString()
   email?: string;
+
+  @IsOptional()
+  @IsString()
   licenseNumber?: string;
-  license_expiry?: string;
-  is_part_time?: boolean;
-  is_available?: boolean;
-  vendor_id?: string;
-  assigned_vehicle_id?: string;
+
+  @IsOptional()
+  @IsDateString()
+  licenseExpiry?: string;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isPartTime?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isAvailable?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  vendorId?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  assignedVehicleId?: number;
+
+  @IsOptional()
+  @IsString()
+  licenseImage?: string;
+
+  @IsOptional()
+  @IsString()
+  rcImage?: string;
 }
