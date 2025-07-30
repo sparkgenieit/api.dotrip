@@ -102,16 +102,29 @@ export class DriverService {
     });
   }
 
-  async findOne(id: number) {
-    return this.prisma.driver.findUnique({
-      where: { id },
-      include: {
-        assignedVehicle: true,
-        vendor: true,
-        user: true,
-      },
-    });
-  }
+async findOne(id: number) {
+  return this.prisma.driver.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      fullName: true,
+      phone: true,
+      email: true,
+      licenseNumber: true,
+      licenseExpiry: true,
+      isPartTime: true,
+      isAvailable: true,
+      licenseImage: true, // ✅ include license image
+      rcImage: true,       // ✅ include rc image
+      vendorId: true,
+      assignedVehicleId: true,
+      userId: true,
+      assignedVehicle: true,
+      vendor: true,
+      user: true,
+    },
+  });
+}
 
   async update(id: number, dto: UpdateDriverDto) {
     return this.prisma.driver.update({
