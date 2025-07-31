@@ -45,8 +45,8 @@ model User {
   email     String   @unique
   password  String?
   phone     String?
-   age      Int?          // ✅ NEW
-  gender    String?       // ✅ NEW
+  age       Int? // ✅ NEW
+  gender    String? // ✅ NEW
   role      Role     @default(RIDER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -85,7 +85,7 @@ model Vehicle {
   id                 Int       @id @default(autoincrement())
   name               String
   model              String
-  image              Json    
+  image              Json
   capacity           Int
   registrationNumber String    @unique
   price              Int       @default(0)
@@ -103,7 +103,7 @@ model Vehicle {
   driverOwner   Driver? @relation(fields: [driverOwnerId], references: [id])
 
   vehicleType  VehicleType @relation(fields: [vehicleTypeId], references: [id])
-  priceId      Int        @default(10)
+  priceId      Int         @default(10)
   vehiclePrice Price       @relation(fields: [priceId], references: [id])
   driver       Driver[]    @relation("VehicleToDriver")
   trips        Trip[]      @relation("VehicleTrips")
@@ -138,11 +138,11 @@ model Driver {
   userId Int?
   user   User? @relation("UserDrivers", fields: [userId], references: [id])
 
-  trips    Trip[]
-  Feedback Feedback[]
-  Vehicle  Vehicle[]
-  driverUpdates DriverUpdate[] // ✅ new
-
+  trips           Trip[]
+  Feedback        Feedback[]
+  Vehicle         Vehicle[]
+  driverUpdates   DriverUpdate[] // ✅ new
+  tripAssistances TripAssistance[] // ✅ required list (always present, can be empty)
 }
 
 model VehicleType {
@@ -296,7 +296,7 @@ model Trip {
   Feedback Feedback?
   invoice  Invoice? // ✅ NEW: back reference from Trip to Invoice (one-to-one)
 
-  assistances TripAssistance[]
+  assistances   TripAssistance[]
   driverUpdates DriverUpdate[] // ✅ new
 }
 
@@ -347,16 +347,18 @@ model Invoice {
 }
 
 model TripAssistance {
-  id             Int            @id @default(autoincrement())
-  tripId         Int
-  location       String
-  subject        String
-  description    String
-  reply          String?
-  messageStatus  messageStatus? @default(UNREAD)
-  createdAt      DateTime       @default(now())
+  id            Int            @id @default(autoincrement())
+  tripId        Int
+  driverId      Int?
+  location      String
+  subject       String
+  description   String
+  reply         String?
+  messageStatus messageStatus? @default(UNREAD)
+  createdAt     DateTime       @default(now())
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip   Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  driver Driver? @relation(fields: [driverId], references: [id]) // ✅ NEW
 
   @@map("trip_assistances")
 }
@@ -373,4 +375,3 @@ model DriverUpdate {
   driver Driver @relation(fields: [driverId], references: [id])
   trip   Trip   @relation(fields: [tripId], references: [id])
 }
-
