@@ -132,4 +132,10 @@ async updateMultipart(
   remove(@Param('id') id: string) {
     return this.driverService.remove(+id);
   }
+  
+  @Get(':id')
+async getDriver(@Param('id') id: string) {
+  return this.driverService.findOne(+id); // ✅ Make sure this calls the `findOne` that includes images
+}
+
 }

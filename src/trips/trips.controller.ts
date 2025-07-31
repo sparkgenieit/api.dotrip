@@ -146,9 +146,4 @@ async sendTripAssistanceReply(
   }
   return this.tripsService.replyToTripAssistance(id, reply);
 }
-
-
-  
-
-
 }

@@ -21,20 +21,28 @@ export class TripsService {
         vehicle: true,
         vendor: true,
         Feedback: true,
+        assistances: true,
       }
     });
   }
 
-  async findAllByVendor(vendorId: number) {
+async findAllByVendor(vendorId: number) {
   return this.prisma.trip.findMany({
     where: { vendorId },
     include: {
-      booking: true,
+      booking: {
+        include: {
+          pickupAddress: true,
+          dropAddress: true,
+          user: true,
+        },
+      },
       rider: true,
       driver: true,
       vehicle: true,
       vendor: true,
       Feedback: true,
+      assistances: true, // ✅ Include this line
     },
   });
 }
@@ -70,12 +78,19 @@ export class TripsService {
   return this.prisma.trip.findMany({
     where: { driverId },
     include: {
-      booking: true,
+      booking: {
+        include: {
+          pickupAddress: true,
+          dropAddress: true,
+          user: true,
+        },
+      },
       rider: true,
       driver: true,
       vehicle: true,
       vendor: true,
       Feedback: true,
+      assistances: true, // ✅ Include this line
     },
   });
 }

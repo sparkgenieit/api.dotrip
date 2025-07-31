@@ -3,9 +3,14 @@ import { NestFactory }    from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import  cookieParser  from 'cookie-parser';
 import { AppModule }      from './app.module';
+import * as express from 'express';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+    // ✅ Serve static files from uploads/ (this is the fix)
+  app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
 
   // parse cookies first
   app.use(cookieParser());
