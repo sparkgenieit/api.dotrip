@@ -1,97 +1,57 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards,Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Request } from '@nestjs/common';
-import { AuthRequest } from "../types/auth-request";
-
+import { Role } from './role.enum';
+import { AuthRequest } from '../types/auth-request';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  @Roles('SUPER_ADMIN')
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
-  }
-
-  
-
-  @Get()
+  // ✅ Register new user after OTP verification
+  @Post('register')
   @Roles('SUPER_ADMIN', 'ADMIN')
-  findAll() {
-    return this.usersService.findAll();
+  register(@Body('phone') phone: string, @Body('role') role: Role) {
+    return this.usersService.create(phone, role);
   }
 
-  
+  // ✅ Lookup by phone
+  @Post('check-phone')
+  async checkPhone(@Body('phone') phone: string) {
+    const user = await this.usersService.findByPhone(phone);
+    if (!user) return { exists: false };
 
-  @Delete(':id')
-  @Roles('SUPER_ADMIN')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+    return {
+      exists: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+      },
+    };
   }
 
-  // users.controller.ts
-@Post('check-email')
-async checkEmail(@Body('email') email: string) {
-  const user = await this.usersService.findByEmailWithAddresses(email);
-  if (!user) return { exists: false };
+  // ✅ Get current logged-in user's profile
+  @Get('me')
+  getProfile(@Req() req: AuthRequest) {
+    return this.usersService.getUserById(req.user.id);
+  }
 
-  return {
-    exists: true,
-    user: {
-      id: user.id,
-      name: user.name,
-      phone:user.phone,
-      email: user.email,
-    },
-    addresses: user.addressBooks,
-  };
-}
-
-// users.controller.ts
-@Post('check-phone')
-async checkPhone(@Body('phone') phone: string) {
-  const user = await this.usersService.findByPhone(phone);
-  if (!user) return { exists: false };
-
-  return {
-    exists: true,
-    user: {
-      id: user.id,
-      name: user.name,
-      phone:user.phone,
-      email: user.email,
-    },
-    addresses: user.addressBooks,
-  };
-}
-
-@Get('/me')
-getProfile(@Req() req: AuthRequest) {
-  
-  return this.usersService.findOne(req.user.id);
-}
-
-
-@Patch('/me')
-updateProfile(@Body() dto: UpdateUserDto, @Param() params,@Req() req: AuthRequest) {
-  return this.usersService.update(req.user.id, dto);
-}
-
-@Post('change-password')
-   async changePassword(
- @Req() req: AuthRequest,
-  @Body('currentPassword') currentPassword: string,
-  @Body('newPassword') newPassword: string
-  ) {
-  return this.usersService.changePassword(req.user.id, currentPassword, newPassword);
-}
-
-
-
+  // ✅ Update current user's profile
+  @Patch('me')
+  updateProfile(@Req() req: AuthRequest, @Body() dto: UpdateUserDto) {
+    return this.usersService.updateUser(req.user.id, dto);
+  }
 }

@@ -25,6 +25,7 @@ import { TripAssistanceDto } from './dto/trip-assistance.dto';
 import { ParseIntPipe } from '@nestjs/common';
 import { TripAssistanceReplyDto } from './dto/trip-assistance-reply.dto';
 
+
 @Controller('trips')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TripsController {
@@ -32,6 +33,14 @@ export class TripsController {
     private readonly tripsService: TripsService,
     private readonly prisma: PrismaService
   ) {}
+
+  @Patch(':id/assign-vehicle')
+async assignVehicle(
+  @Param('id', ParseIntPipe) tripId: number,
+  @Body('vehicleId', ParseIntPipe) vehicleId: number,
+) {
+  return this.tripsService.assignVehicleToTrip(tripId, vehicleId);
+}
 
   @Post()
   @Roles('VENDOR')
@@ -127,6 +136,7 @@ async getTripAssistance(@Param('id', ParseIntPipe) tripId: number, @Req() req: A
   return this.tripsService.getTripAssistance(tripId);
 }
 
+
   
   @Get(':id')
   findOne(@Param('id') id: string) {
@@ -145,5 +155,16 @@ async sendTripAssistanceReply(
     throw new BadRequestException('Reply cannot be empty');
   }
   return this.tripsService.replyToTripAssistance(id, reply);
+}
+// ─── Reassign Vehicle ─────────────────────────────────────────────
+@Patch(':tripId/assign-vehicle')
+@UseGuards(JwtAuthGuard)
+@Roles('VENDOR')
+async assignVehicleToTrip(
+  @Param('tripId', ParseIntPipe) tripId: number,
+  @Body('vehicleId', ParseIntPipe) vehicleId: number,
+  @Req() req: any,
+) {
+  return this.tripsService.reassignVehicle(tripId, vehicleId, req.user.id);
 }
 }

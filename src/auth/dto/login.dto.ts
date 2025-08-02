@@ -1,8 +1,17 @@
-import { IsEmail, IsString } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
-export class LoginDto {
-  @IsEmail()
-  email: string;
+export class AuthRequestDto {
   @IsString()
-  password: string;
+  @IsNotEmpty()
+  mobileNumber: string;
+}
+
+export class VerifyOtpRequestDto {
+  @IsString()
+  @IsNotEmpty()
+  mobileNumber: string;
+
+  @IsString()
+  @IsNotEmpty()
+  otp: string;
 }
