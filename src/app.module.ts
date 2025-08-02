@@ -53,11 +53,6 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
      InvoiceModule,
      DriverUpdatesModule,
   ],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-  ],
+  providers: [],
 })
 export class AppModule {}
