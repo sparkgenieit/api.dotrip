@@ -127,8 +127,31 @@ async getAllAssistance() {
 }
 
 async getTripAssistance(tripId: number) {
-  return this.prisma.tripAssistance.findFirst({ where: { tripId } });
+  const assistance = await this.prisma.tripAssistance.findFirst({
+    where: { tripId },
+    include: {
+      trip: {
+        include: {
+          booking: {
+            select: {
+              vehicleTypeId: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!assistance) {
+    throw new NotFoundException('Trip assistance request not found');
+  }
+
+  return {
+    ...assistance,
+    vehicleTypeId: assistance.trip?.booking?.vehicleTypeId ?? null,
+  };
 }
+
 
 // trips.service.ts
 
