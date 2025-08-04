@@ -44,10 +44,11 @@ model User {
   name      String
   email     String   @unique
   password  String?
-  phone     String?
+  phone String? @unique // ✅ make it unique
   age       Int? // ✅ NEW
   gender    String? // ✅ NEW
   role      Role     @default(RIDER)
+  token     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
