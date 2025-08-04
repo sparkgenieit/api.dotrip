@@ -21,6 +21,7 @@ export class AuthController {
   // 🔐 Email/Password Login (Local Strategy)
  
   @Post('login')
+  @UseGuards(LocalAuthGuard)
   async login(@Req() req: Request & { user: any }) {
     const result = await this.auth.login(req.user);
     console.log('✅ Login Response:', result);
