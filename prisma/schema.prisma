@@ -44,13 +44,13 @@ model User {
   name      String
   email     String   @unique
   password  String?
-  phone  String @unique   
+  phone String? @unique // ✅ make it unique
   age       Int? // ✅ NEW
   gender    String? // ✅ NEW
   role      Role     @default(RIDER)
+  token     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  token  String?
   ownsVendor Vendor? @relation("UserOwnsVendor") // ✅ vendor creator
 
   Driver       Driver[]      @relation("UserDrivers")
