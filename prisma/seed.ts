@@ -24,15 +24,15 @@ async function main() {
   const password = await bcrypt.hash('123123', 10);
 
   // ✅ Seed users
-  await prisma.user.createMany({
-    data: [
-      { name: 'Admin',  email: 'admin@dotrip.net',  password, role: 'ADMIN' },
-      { name: 'User',   email: 'user@dotrip.net',   password, role: 'RIDER' },
-      { name: 'Driver', email: 'driver@dotrip.net', password, role: 'DRIVER' },
-      { name: 'Vendor', email: 'vendor@dotrip.net', password, role: 'VENDOR' }
-    ],
-    skipDuplicates: true
-  });
+await prisma.user.createMany({
+  data: [
+    { name: 'Admin',  email: 'admin@dotrip.net',  password, phone: '9111111111', role: 'ADMIN' },
+    { name: 'User',   email: 'user@dotrip.net',   password, phone: '9222222222', role: 'RIDER' },
+    { name: 'Driver', email: 'driver@dotrip.net', password, phone: '9333333333', role: 'DRIVER' },
+    { name: 'Vendor', email: 'vendor@dotrip.net', password, phone: '9444444444', role: 'VENDOR' }
+  ],
+  skipDuplicates: true
+});
 
 // ✅ Seed vehicle types with estimatedRatePerKm and baseFare
 await prisma.vehicleType.createMany({
