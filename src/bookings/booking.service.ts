@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateBookingDto } from './dto/update-booking.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class BookingService {
@@ -74,24 +75,37 @@ export class BookingService {
     });
   }
 
-  findAll() {
-    return this.prisma.booking.findMany({
-      include: {
-        user: true,
-        vehicleType: true,
-        pickupAddress: true,
-        dropAddress: true,
-        fromCity: true,
-        toCity: true,
-        TripType: true,
-        quotes: {
-        where: { approved: true },
-        select: { id: true },
-      },
-      trips: true, // ✅ Include assigned trips here
-      },
+async findAll(user?: { id: number; role?: string }) {
+  let where: Prisma.BookingWhereInput | undefined;
+
+  // If the caller is a VENDOR, limit to their bookings
+  if (user?.role?.toUpperCase() === 'VENDOR') {
+    const vendor = await this.prisma.vendor.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
     });
+    if (!vendor) {
+      throw new NotFoundException('Vendor not found for the current user');
+    }
+    where = { vendorId: vendor.id };
   }
+
+  return this.prisma.booking.findMany({
+    where,
+    include: {
+      user: true,
+      vehicleType: true,
+      pickupAddress: true,
+      dropAddress: true,
+      fromCity: true,
+      toCity: true,
+      TripType: true,
+      quotes: { where: { approved: true }, select: { id: true } },
+      trips: true,
+    },
+    orderBy: { id: 'desc' }, // optional
+  });
+}
 
   findOne(id: number) {
     return this.prisma.booking.findUnique({

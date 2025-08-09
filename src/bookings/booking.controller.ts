@@ -18,10 +18,12 @@ create(@Body() body: CreateBookingPublicDto) {
   return this.bookingService.create(body);
 }
 
-  @Get()
-  findAll() {
-    return this.bookingService.findAll();
-  }
+@Get()
+findAll(@Req() req: AuthRequest) {
+  // req.user should have { id, role } from JwtAuthGuard
+  return this.bookingService.findAll(req.user);
+}
+
 
   @Get(':id')
   findOne(@Param('id') id: string) {
