@@ -5,11 +5,12 @@ import {
   UnauthorizedException,
   InternalServerErrorException,
   HttpException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
-// import { Msg91Service } from 'src/msg91'; // optional external OTP service
+// import { Msg91Service } from 'src/msg91';
 import { AuthRequestDto, VerifyOtpRequestDto } from './dto/login.dto';
 
 @Injectable()
@@ -17,37 +18,85 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-    // private msg91Service: Msg91Service, // Uncomment if using real SMS
+    // private msg91Service: Msg91Service,
   ) {}
 
-  /**
-   * Email/Password login
-   */
-  async validateUser(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: { id: true, email: true, password: true, role: true },
-    });
-
-    if (!user) throw new UnauthorizedException('Invalid credentials');
-
-    const passwordMatches = await bcrypt.compare(password, user.password);
-    if (!passwordMatches) throw new UnauthorizedException('Invalid credentials');
-
-    const { password: _, ...rest } = user;
-    return rest;
+  // ─────────────────────────────────────────────────────
+  // Helpers
+  // ─────────────────────────────────────────────────────
+  private normalizePhone(input?: string) {
+    if (!input) return input;
+    return input.replace(/[^\d]/g, ''); // keep digits only
   }
 
-  async login(user: { id: number; email: string; role: string }) {
-    const vendor = await this.prisma.vendor.findFirst({ where: { userId: user.id } });
-    const driver = await this.prisma.driver.findFirst({ where: { userId: user.id } });
+  private isEmailLike(value: string) {
+    return value.includes('@');
+  }
+
+  /**
+   * Email/Phone + Password login
+   * Accepts either email or mobile number in `identifier`.
+   */
+  async validateUser(identifier: string, password: string) {
+    if (!identifier || !password) {
+      throw new BadRequestException('Identifier and password are required');
+    }
+
+    const looksLikeEmail = this.isEmailLike(identifier);
+    const normalizedPhone = this.normalizePhone(identifier);
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          looksLikeEmail ? { email: identifier } : undefined,
+          !looksLikeEmail ? { phone: normalizedPhone } : undefined,
+        ].filter(Boolean) as any,
+      },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        password: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.password) {
+      // Likely created via OTP-only signup
+      throw new UnauthorizedException('Password login not enabled. Use OTP login.');
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password);
+    if (!passwordMatches) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const { password: _pw, ...rest } = user;
+    return rest; // { id, email, phone, role }
+  }
+
+  /**
+   * Create JWT and include related IDs when available
+   */
+  async login(user: { id: number; email?: string; phone?: string; role: string }) {
+    const [vendor, driver] = await Promise.all([
+      this.prisma.vendor.findFirst({ where: { userId: user.id }, select: { id: true } }),
+      this.prisma.driver.findFirst({ where: { userId: user.id }, select: { id: true } }),
+
+    ]);
 
     const payload: any = {
       sub: user.id,
       email: user.email,
+      phone: user.phone,
       role: user.role,
       ...(vendor && { vendorId: vendor.id }),
       ...(driver && { driverId: driver.id }),
+    
     };
 
     return {
@@ -55,18 +104,22 @@ export class AuthService {
     };
   }
 
+  // ─────────────────────────────────────────────────────
+  // OTP FLOW (unchanged behavior)
+  // ─────────────────────────────────────────────────────
+
   /**
    * 🔐 Send OTP to phone number
    */
   async authenticate(authRequestDto: AuthRequestDto) {
-    const { mobileNumber } = authRequestDto;
+    const mobileNumber = this.normalizePhone(authRequestDto.mobileNumber);
 
     const isTestAccount =
-      mobileNumber === process.env.TEST_ACCOUNT_MOBILE &&
+      mobileNumber === this.normalizePhone(process.env.TEST_ACCOUNT_MOBILE) &&
       process.env.ENABLE_TEST_ACCOUNT === 'true';
 
     if (!isTestAccount) {
-      // await this.msg91Service.sendOtp(mobileNumber); // Real OTP
+      // await this.msg91Service.sendOtp(mobileNumber);
       console.log(`OTP sent to ${mobileNumber}`); // Dev/test mock
     }
 
@@ -77,10 +130,11 @@ export class AuthService {
    * 🔐 Verify OTP and login/create user
    */
   async verifyOtp(dto: VerifyOtpRequestDto) {
-    const { mobileNumber, otp } = dto;
+    const mobileNumber = this.normalizePhone(dto.mobileNumber);
+    const otp = dto.otp;
 
     const isTestAccount =
-      mobileNumber === process.env.TEST_ACCOUNT_MOBILE &&
+      mobileNumber === this.normalizePhone(process.env.TEST_ACCOUNT_MOBILE) &&
       process.env.ENABLE_TEST_ACCOUNT === 'true';
 
     if (!isTestAccount) {
@@ -94,22 +148,24 @@ export class AuthService {
 
     if (!user) {
       const password = await bcrypt.hash('123123', 10);
-    user = await this.prisma.user.create({
-      data: {
-        phone: mobileNumber,
-        role: 'RIDER',
-        name: 'PhoneUser',
-        email: `user_${mobileNumber}@otpuser.com`, // or `${mobileNumber}@dummy.com` if `email` is required
-        password: password,
-      },
-    });
+      user = await this.prisma.user.create({
+        data: {
+          phone: mobileNumber,
+          role: 'RIDER',
+          name: 'PhoneUser',
+          email: `user_${mobileNumber}@otpuser.com`, // fallback if email is required
+          password,
+        },
+      });
     }
 
-    const payload = { sub: user.id, phone: mobileNumber, role: user.role };
+    const payload = {
+      sub: user.id,
+      phone: mobileNumber,
+      role: user.role,
+    };
 
-    const token = this.jwtService.sign(payload, {
-      expiresIn: '7d',
-    });
+    const token = this.jwtService.sign(payload, { expiresIn: '7d' });
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -119,12 +175,25 @@ export class AuthService {
     return { access_token: token };
   }
 
+  // ─────────────────────────────────────────────────────
+  // Profile & Logout
+  // ─────────────────────────────────────────────────────
+
   /**
    * 👤 Get Profile
    */
   async getProfile(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     if (!user) throw new UnauthorizedException('Unauthorized');

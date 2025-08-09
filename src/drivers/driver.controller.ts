@@ -73,6 +73,7 @@ export class DriverController {
 
   @Get()
   findAll(@Req() req: AuthRequest) {
+    console.log(req.user);
     return this.driverService.findDriversByRole(req.user);
   }
 
@@ -123,10 +124,7 @@ async updateMultipart(
 }
 
 
-  @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateDriverDto) {
-    return this.driverService.update(+id, dto);
-  }
+
 
   @Delete(':id')
   remove(@Param('id') id: string) {

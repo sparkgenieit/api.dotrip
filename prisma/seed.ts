@@ -30,11 +30,10 @@ async function main() {
   // ✅ Base users (admin, user, driver, vendor placeholders)
   await prisma.user.createMany({
      data: [
-    { name: 'Admin',  email: 'admin@dotrip.net',  password, phone: '9111111111', role: 'ADMIN' },
-    { name: 'User',   email: 'user@dotrip.net',   password, phone: '9222222222', role: 'RIDER' },
-    { name: 'Driver', email: 'driver@dotrip.net', password, phone: '9333333333', role: 'DRIVER' },
-    { name: 'Vendor', email: 'vendor@dotrip.net', password, phone: '9444444444', role: 'VENDOR' }
-  ],
+    { name: 'Admin',  email: 'admin@dotrip.net',  password, phone: '91111111111', role: 'ADMIN' },
+    { name: 'User',   email: 'user@dotrip.net',   password, phone: '92222222222', role: 'RIDER' },
+    { name: 'Driver', email: 'driver@dotrip.net', password, phone: '93333333333', role: 'DRIVER' },
+   ],
     skipDuplicates: true,
   });
 
@@ -173,11 +172,11 @@ async function main() {
 
   // 🧑‍💼 Vendor user (IDEMPOTENT, bcrypt)
   const desiredCompanyReg = 'VND12345';
-
+ 
   vendorUser = await prisma.user.upsert({
-    where: { email: 'vendor1@mail.com' },
+    where: { email: 'vendor@dotrip.net' },
     update: { name: 'Vendor 1', phone: '9000000000', role: Role.VENDOR, password },
-    create: { name: 'Vendor 1', email: 'vendor1@mail.com', phone: '9000000000', role: Role.VENDOR, password },
+    create: { name: 'Vendor 1', email: 'vendor@dotrip.net', phone: '9000000000', role: Role.VENDOR, password },
   });
 
   // 🧑‍💼 Vendor: schema has no Vendor.email; companyReg & userId are unique-ish.

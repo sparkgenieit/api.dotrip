@@ -1,16 +1,17 @@
+// src/auth/auth.controller.ts
+
 import {
   Controller,
   Post,
-  Req,
   Body,
   UseGuards,
   Get,
   Delete,
   HttpCode,
+  Req,
+  BadRequestException,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './local-auth.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { AuthRequestDto, VerifyOtpRequestDto } from './dto/login.dto';
 
@@ -18,45 +19,62 @@ import { AuthRequestDto, VerifyOtpRequestDto } from './dto/login.dto';
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
-  // 🔐 Email/Password Login (Local Strategy)
- 
+  /**
+   * 🔐 Password login with email or mobile number.
+   * Body: { identifier: string; password: string }
+   */
   @Post('login')
-  @UseGuards(LocalAuthGuard)
-  async login(@Req() req: Request & { user: any }) {
-    const result = await this.auth.login(req.user);
-    console.log('✅ Login Response:', result);
+  @HttpCode(200)
+  async login(@Body() body: { identifier: string; password: string }) {
+    const { identifier, password } = body || {};
+    if (!identifier || !password) {
+      throw new BadRequestException('identifier and password are required');
+    }
+    const safeUser = await this.auth.validateUser(identifier, password);
+    const result = await this.auth.login(safeUser);
+    // console.log('✅ Login Response:', result);
     return result;
   }
 
-  // 📲 Send OTP
+  /**
+   * 📲 Send OTP
+   */
   @Post('send-otp')
- 
+  @HttpCode(200)
   async sendOtp(@Body() dto: AuthRequestDto) {
-    await this.auth.authenticate(dto);
+    return this.auth.authenticate(dto); // returns { message: 'OTP sent successfully' }
   }
 
-  // 🔁 Resend OTP (optional)
+  /**
+   * 🔁 Resend OTP (optional)
+   */
   @Post('resend-otp')
   @HttpCode(200)
   async resendOtp(@Body() dto: AuthRequestDto) {
-    await this.auth.authenticate(dto);
+    return this.auth.authenticate(dto);
   }
 
-  // ✅ Verify OTP and login/register
+  /**
+   * ✅ Verify OTP and login/register
+   */
   @Post('verify-otp')
   @HttpCode(200)
   async verifyOtp(@Body() dto: VerifyOtpRequestDto) {
-    return this.auth.verifyOtp(dto);
+    return this.auth.verifyOtp(dto); // returns { access_token }
   }
 
-  // 👤 Get Profile (JWT protected)
+  /**
+   * 👤 Get Profile (JWT protected)
+   */
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@Req() req: any) {
     return this.auth.getProfile(req.user.sub);
   }
 
-  // 🚪 Logout (JWT protected)
+  /**
+   * 🚪 Logout (JWT protected)
+   */
   @UseGuards(JwtAuthGuard)
   @Delete('logout')
   @HttpCode(204)

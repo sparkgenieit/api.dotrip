@@ -88,7 +88,7 @@ async assignVehicle(
   }
 
   @Get()
-@Roles('ADMIN', 'VENDOR', 'DRIVER') // ✅ Added DRIVER role
+@Roles('ADMIN', 'VENDOR', 'DRIVER','RIDER') // ✅ Added DRIVER role
 findAll(@Req() req: AuthRequest) {
   const { role, vendorId, driverId } = req.user;
 
