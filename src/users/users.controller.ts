@@ -40,6 +40,7 @@ export class UsersController {
         name: user.name,
         phone: user.phone,
       },
+      addresses: user.addressBooks ?? []
     };
   }
 

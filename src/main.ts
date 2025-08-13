@@ -33,7 +33,9 @@ app.enableCors({
     transform: true,
   }));
 
-  await app.listen(process.env.PORT || 3000, '0.0.0.0');
-  console.log(`🚀 Listening on port ${process.env.PORT || 4001}`);
+    const port = Number(process.env.PORT) || 3000;
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 Listening on http://localhost:${port}`);
+
 }
 bootstrap();
