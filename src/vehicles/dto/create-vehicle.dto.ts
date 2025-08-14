@@ -1,12 +1,32 @@
+// src/vehicles/dto/create-vehicle.dto.ts
 import {
   IsString,
   IsInt,
   IsOptional,
   IsDateString,
-  IsString as IsStringArray,
   IsArray,
+  IsIn,
+  ValidateNested,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
+
+export class PriceSpecDto {
+  @IsIn(['BASE', 'PEAK', 'DISCOUNT'])
+  priceType: 'BASE' | 'PEAK' | 'DISCOUNT';
+
+  // Coerce "12" (multipart string) -> number, then validate as int
+  @Type(() => Number)
+  @IsInt()
+  price: number;
+
+  @Type(() => Number)
+  @IsInt()
+  originalPrice: number;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+}
 
 export class CreateVehicleDto {
   @IsString()
@@ -16,26 +36,29 @@ export class CreateVehicleDto {
   model: string;
 
   @IsArray()
-  @IsStringArray({ each: true })
+  @IsString({ each: true })
   @IsOptional()
   image: string[];
 
-  @Transform(({ value }) => parseInt(value, 10))
+  @Type(() => Number)
   @IsInt()
   capacity: number;
 
-  @Transform(({ value }) => parseInt(value, 10))
+  // ⛔️ Old top-level fields made optional to avoid hard failures
+  @IsOptional()
+  @Type(() => Number)
   @IsInt()
-  price: number;
+  price?: number;
 
-  @Transform(({ value }) => parseInt(value, 10))
+  @IsOptional()
+  @Type(() => Number)
   @IsInt()
-  originalPrice: number;
+  originalPrice?: number;
 
   @IsString()
   registrationNumber: string;
 
-  @Transform(({ value }) => parseInt(value, 10))
+  @Type(() => Number)
   @IsInt()
   vehicleTypeId: number;
 
@@ -43,8 +66,8 @@ export class CreateVehicleDto {
   @IsString()
   status?: string;
 
-  @Transform(({ value }) => parseInt(value, 10))
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   comfortLevel?: number;
 
@@ -52,8 +75,28 @@ export class CreateVehicleDto {
   @IsDateString()
   lastServicedDate?: string;
 
-  @Transform(({ value }) => parseInt(value, 10))
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   vendorId?: number;
+
+  // ✅ Preferred: nested priceSpec (works with JSON string OR bracket-notation)
+  @IsOptional()
+  @ValidateNested()
+  @Transform(({ value }) => {
+    // Accept JSON string ("{...}") or already-parsed object or bracket-notation object
+    if (value == null) return value;
+    if (typeof value === 'string') {
+      try { return JSON.parse(value); } catch { return value; }
+    }
+    return value;
+  })
+  @Type(() => PriceSpecDto)
+  priceSpec?: PriceSpecDto;
+
+  // ✅ Optional: allow linking an existing Price row directly
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  priceId?: number;
 }

@@ -50,42 +50,104 @@ async getAvailableVehicles(typeId: number, vendorUserId: number) {
   });
 }
 
-  async create(
-    dto: CreateVehicleDto,
-    current: {
-      userId?: number;
-      role: string;
-      vendorId?: number;
-      driverId?: number;
-    }
-  ) {
-    const data: any = {
-      name: dto.name,
-      model: dto.model,
-      image: dto.image,
-      capacity: dto.capacity,
-      price: dto.price,
-      originalPrice: dto.originalPrice,
-      registrationNumber: dto.registrationNumber,
-      vehicleTypeId: dto.vehicleTypeId,
-      status: dto.status ?? "available",
-      comfortLevel: dto.comfortLevel ?? 3,
-      lastServicedDate: dto.lastServicedDate
-        ? new Date(dto.lastServicedDate)
-        : undefined,
-      createdBy: current.role,
-    };
-
-    if (current.role === "VENDOR" && current.vendorId) {
-      data.vendorId = current.vendorId;
-    } else if (current.role === "DRIVER" && current.driverId) {
-      data.driverOwnerId = current.driverId;
-    } else if (dto.vendorId) {
-      data.vendorId = dto.vendorId;
-    }
-
-    return this.prisma.vehicle.create({ data });
+async create(
+  dto: CreateVehicleDto & {
+    // Optional: extend DTO expectations here if not already present
+    priceId?: number;
+    priceSpec?: { priceType: string; price: number }; // for nested create
+  },
+  current: {
+    userId?: number;
+    role: string;
+    vendorId?: number;
+    driverId?: number;
   }
+) {
+  const data: any = {
+    name: dto.name,
+    model: dto.model,
+    image: dto.image,
+    capacity: dto.capacity,
+    // keep your scalar fields (these are on Vehicle)
+    price: dto.priceSpec?.price ?? dto.price ?? 0,
+    originalPrice:
+    dto.priceSpec?.originalPrice ??
+    dto.priceSpec?.price ??
+    dto.originalPrice ??
+    dto.price ??
+    0,
+    registrationNumber: dto.registrationNumber,
+    vehicleTypeId: dto.vehicleTypeId,
+    status: dto.status ?? "available",
+    comfortLevel: dto.comfortLevel ?? 3,
+    lastServicedDate: dto.lastServicedDate
+      ? new Date(dto.lastServicedDate)
+      : undefined,
+    createdBy: current.role,
+  };
+
+  // Owner (Vendor or Driver)
+  if (current.role === "VENDOR" && current.vendorId) {
+    data.vendorId = current.vendorId;
+  } else if (current.role === "DRIVER" && current.driverId) {
+    data.driverOwnerId = current.driverId;
+  } else if (dto.vendorId) {
+    data.vendorId = dto.vendorId;
+  }
+
+  // ── PRICE RELATION HANDLING (matches your schema) ───────────────────────────
+  // Your schema has: priceId Int @default(10), vehiclePrice Price @relation(...)
+  // Avoid FK violation by EITHER connecting a valid priceId OR creating one.
+ // ── PRICE RELATION HANDLING (Vehicle has priceId FK; no `vehiclePrice` relation field) ──
+let priceId: number | null = null;
+
+if (dto.priceId) {
+  const exists = await this.prisma.price.findUnique({
+    where: { id: dto.priceId },
+    select: { id: true },
+  });
+  if (!exists) throw new NotFoundException(`Price with ID ${dto.priceId} not found`);
+  priceId = dto.priceId;
+} else if (dto.priceSpec) {
+  // Create a Price row first, then attach via priceId
+  const created = await this.prisma.price.create({
+    data: {
+      priceType: dto.priceSpec.priceType ?? 'BASE',
+      // Use your actual Price model fields. If your model uses `amount`, map accordingly.
+      price: dto.priceSpec.price,
+    },
+    select: { id: true },
+  });
+  priceId = created.id;
+} else {
+  // Fallback to default if it exists
+  const defaultId = 10;
+  const defaultExists = await this.prisma.price.findUnique({
+    where: { id: defaultId },
+    select: { id: true },
+  });
+  if (!defaultExists) {
+    throw new NotFoundException(
+      `No price provided and default priceId=${defaultId} does not exist. Provide { priceId } or { priceSpec: { priceType, price } } or create a Price row with id=${defaultId}.`
+    );
+  }
+  priceId = defaultId;
+}
+
+// attach FK (only if we actually have one)
+if (priceId) data.priceId = priceId;
+
+
+return this.prisma.vehicle.create({
+  data,
+  include: {
+    // no `vehiclePrice` here; use the actual relation name if you have one (e.g., `price`)
+    vendor: true,
+    driver: true,
+    vehicleType: true,
+  },
+});
+}
 
   async update(id: number, dto: UpdateVehicleDto) {
     const { vendorId, lastServicedDate, ...rest } = dto;

@@ -7,11 +7,39 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   // ✅ Find by phone (used in OTP login flow)
-  async findByPhone(phone: string) {
-    return this.prisma.user.findUnique({
-      where: { phone },
-    });
+ async findByPhone(phone: string) {
+  const user = await this.prisma.user.findUnique({
+    where: { phone },
+    include: {
+      addressBooks: {
+        select: {
+          id: true,
+          type: true,
+          address: true,
+          city: true,
+          pinCode: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' }, // newest first
+      },
+    },
+  });
+
+  if (!user) return null;
+
+  // Keep only the first (newest) address per type
+  const seen = new Set<string>();
+  const deduped = [];
+  for (const a of user.addressBooks) {
+    if (!seen.has(a.type)) {
+      deduped.push(a);
+      seen.add(a.type);
+    }
   }
+
+  return { ...user, addressBooks: deduped };
+}
+
 
   // ✅ Create user with phone number after OTP verified
  async create(phone: string, role?: Role) {
