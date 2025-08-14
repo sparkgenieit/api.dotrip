@@ -9,6 +9,11 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // ⬇️ Increase request size limits (handles base64 images)
+const BODY_LIMIT = process.env.BODY_LIMIT || '20mb';
+app.use(express.json({ limit: BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
+
     // ✅ Serve static files from uploads/ (this is the fix)
   app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
 
