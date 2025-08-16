@@ -148,12 +148,15 @@ model Driver {
 model VehicleType {
   id                 Int       @id @default(autoincrement())
   name               String    @unique
-  estimatedRatePerKm Float     @default(10.0) // ✅ Add rate per km
-  baseFare           Float     @default(0.0) // ✅ Optional: add base fare
+  estimatedRatePerKm Float     @default(10.0)
+  baseFare           Float     @default(0.0)
   seatingCapacity    Int       @default(4)
+  image              Json?
+  
   vehicles           Vehicle[]
   bookings           Booking[]
 }
+
 
 model City {
   id           Int       @id @default(autoincrement())
