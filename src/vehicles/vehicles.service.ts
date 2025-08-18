@@ -149,22 +149,61 @@ return this.prisma.vehicle.create({
 });
 }
 
-  async update(id: number, dto: UpdateVehicleDto) {
-    const { vendorId, lastServicedDate, ...rest } = dto;
+async update(id: number, dto: UpdateVehicleDto) {
+  // Pull out fields needing special handling; keep rest as-is
+  const {
+    vendorId,
+    vehicleTypeId,
+    lastServicedDate,
+    priceSpec,     // ❌ not a Vehicle column (we'll map it)
+    image,         // may arrive as string or string[]
+    ...rest
+  } = dto as any;
 
-    const data: any = {
-      ...rest,
-      ...(lastServicedDate && {
-        lastServicedDate: new Date(lastServicedDate),
-      }),
-    };
+  const data: any = {
+    ...rest, // safe fields like name, model, status, price, originalPrice, capacity, comfortLevel, etc.
+  };
 
-    if (vendorId !== undefined) {
-      data.vendorId = vendorId || null;
-    }
-
-    return this.prisma.vehicle.update({ where: { id }, data });
+  // ✅ image is a single String in schema
+  if (typeof image !== 'undefined') {
+    data.image = Array.isArray(image) ? (image[0] ?? '') : image;
   }
+
+  // ✅ date normalization
+  if (lastServicedDate) {
+    const d = new Date(lastServicedDate);
+    if (!isNaN(d.getTime())) data.lastServicedDate = d;
+  }
+
+  // ✅ vendor relation change (connect / disconnect)
+  if (typeof vendorId !== 'undefined') {
+    if (vendorId) {
+      data.vendor = { connect: { id: vendorId } };
+    } else {
+      data.vendor = { disconnect: true };
+    }
+  }
+
+  // ✅ vehicleType relation change (use connect, not vehicleTypeId scalar)
+  if (typeof vehicleTypeId === 'number') {
+    data.vehicleType = { connect: { id: vehicleTypeId } };
+  }
+
+  // ✅ map priceSpec (if caller still sends it) into Vehicle scalars
+  if (priceSpec) {
+    if (typeof priceSpec.price === 'number') data.price = priceSpec.price;
+    if (typeof priceSpec.originalPrice === 'number') data.originalPrice = priceSpec.originalPrice;
+  }
+
+  // ❌ ensure forbidden keys never reach Prisma `data`
+  delete data.vehicleTypeId;
+  delete data.priceSpec;
+
+  return this.prisma.vehicle.update({
+    where: { id },
+    data,
+  });
+}
 
   async remove(id: number) {
     await this.findOne(id);
