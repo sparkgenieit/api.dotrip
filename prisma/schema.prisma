@@ -85,7 +85,8 @@ model Vehicle {
   id                 Int       @id @default(autoincrement())
   name               String
   model              String
-  image              Json
+  image              String
+  additional_images   Json?
   capacity           Int
   registrationNumber String    @unique
   price              Int       @default(0)
@@ -126,8 +127,8 @@ model Driver {
   licenseExpiry DateTime
   isPartTime    Boolean  @default(false)
   isAvailable   Boolean  @default(true)
-  licenseImage  Json // ✅ NEW
-  rcImage       Json // ✅ NEW
+  licenseImage  String // ✅ NEW
+  rcImage       String // ✅ NEW
 
   assignedVehicleId Int?     @unique
   assignedVehicle   Vehicle? @relation("VehicleToDriver", fields: [assignedVehicleId], references: [id]) // ✅ Backward link
@@ -151,8 +152,7 @@ model VehicleType {
   estimatedRatePerKm Float     @default(10.0)
   baseFare           Float     @default(0.0)
   seatingCapacity    Int       @default(4)
-  image              Json?
-  
+  image              String?  
   vehicles           Vehicle[]
   bookings           Booking[]
 }
