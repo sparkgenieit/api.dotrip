@@ -18,6 +18,7 @@ export class BookingService {
       tripTypeId,
       vehicleTypeId,
       fare,
+      returnDate,
       numPersons   = 1,            // ✅ new ‑ default 1
       numVehicles  = 1,            // ✅ new ‑ default 1
     } = dto;
@@ -64,12 +65,16 @@ export class BookingService {
         pickupAddressId: pickupAddress.id,
         dropAddressId: dropAddress.id,
         pickupDateTime: new Date(pickupDateTime),
+
+        // ✅ NEW: store date-only as midnight UTC (avoids TZ drift)
+        returnDate: returnDate ? new Date(`${returnDate}T00:00:00.000Z`) : null,
+
         fromCityId,
         toCityId,
         tripTypeId,
         fare,
-        numPersons,     // ✅ now saved
-        numVehicles,    // ✅ now saved
+        numPersons,
+        numVehicles,
         status: 'PENDING',
       },
     });
@@ -129,8 +134,21 @@ async findAll(user?: { id: number; role?: string }) {
 
   async update(id: number, data: UpdateBookingDto) {
     await this.findOne(id);
-    return this.prisma.booking.update({ where: { id }, data });
+
+    const { returnDate, ...rest } = data as any;
+
+    return this.prisma.booking.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(returnDate !== undefined && {
+          // set when string provided; clear when empty/null sent
+          returnDate: returnDate ? new Date(`${returnDate}T00:00:00.000Z`) : null,
+        }),
+      },
+    });
   }
+
 
 async getAssignableVehicles(vehicleTypeId: number, user: { id: number; role: string }) {
   let vendorId: number | undefined;

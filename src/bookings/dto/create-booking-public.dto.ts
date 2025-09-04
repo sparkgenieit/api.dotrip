@@ -3,6 +3,7 @@ import {
   IsEmail,
   IsNumber,
   IsDateString,
+  IsOptional,
 } from 'class-validator';
 
 export class CreateBookingPublicDto {
@@ -17,6 +18,10 @@ export class CreateBookingPublicDto {
 
   @IsDateString()
   pickupDateTime: string;
+
+  @IsOptional()
+  @IsDateString()
+  returnDate?: string;
 
   @IsNumber()
   fromCityId: number;

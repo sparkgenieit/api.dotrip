@@ -218,6 +218,7 @@ model Booking {
   pickupAddressId  Int
   dropAddressId    Int
   pickupDateTime   DateTime
+  returnDate       DateTime?         // ✅ NEW: optional return date for round trips
   fromCityId       Int
   toCityId         Int
   tripTypeId       Int
@@ -243,6 +244,7 @@ model Booking {
   // ✅ New: multi-city stop support
   stopCities City[] @relation("BookingStopCities")
 }
+
 
 model Quote {
   id        Int      @id @default(autoincrement())
