@@ -18,9 +18,22 @@ export class BookingService {
       tripTypeId,
       vehicleTypeId,
       fare,
-      numPersons   = 1,            // ✅ new ‑ default 1
-      numVehicles  = 1,            // ✅ new ‑ default 1
+      returnDate,
+      // possible aliases coming from clients:
+      noOfPersons,
+      personsCount,
     } = dto;
+
+    // normalize numbers with min=1
+    const toIntMin1 = (v: any, def = 1) => {
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 1 ? Math.floor(n) : def;
+    };
+
+    const numPersons = toIntMin1(dto?.numPersons ?? noOfPersons ?? personsCount, 1);
+    const numVehicles = toIntMin1(dto?.numVehicles, 1);
+    const fareNum = Number(fare ?? 0) || 0;
+
 
     const user = await this.prisma.user.findFirst({ where: { phone } });
     if (!user) throw new NotFoundException('User not found');
@@ -58,22 +71,29 @@ export class BookingService {
     });
 
     return this.prisma.booking.create({
-      data: {
-        userId: user.id,
-        vehicleTypeId,
-        pickupAddressId: pickupAddress.id,
-        dropAddressId: dropAddress.id,
-        pickupDateTime: new Date(pickupDateTime),
-        fromCityId,
-        toCityId,
-        tripTypeId,
-        fare,
-        numPersons,     // ✅ now saved
-        numVehicles,    // ✅ now saved
-        status: 'PENDING',
-      },
-    });
-  }
+          data: {
+            userId: user.id,
+            vehicleTypeId: Number(vehicleTypeId),
+            pickupAddressId: pickupAddress.id,
+            dropAddressId: dropAddress.id,
+            pickupDateTime: new Date(pickupDateTime),
+
+            // store date-only as midnight UTC (avoids TZ drift)
+            returnDate: returnDate ? new Date(`${returnDate}T00:00:00.000Z`) : null,
+
+            fromCityId: Number(fromCityId),
+            toCityId: Number(toCityId),
+            tripTypeId: Number(tripTypeId),
+
+            // normalized numbers
+            fare: fareNum,
+            numPersons,
+            numVehicles,
+
+            status: 'PENDING',
+          },
+        });
+        }
 
 async findAll(user?: { id: number; role?: string }) {
   let where: Prisma.BookingWhereInput | undefined;
@@ -128,9 +148,53 @@ async findAll(user?: { id: number; role?: string }) {
   }
 
   async update(id: number, data: UpdateBookingDto) {
-    await this.findOne(id);
-    return this.prisma.booking.update({ where: { id }, data });
+  await this.findOne(id);
+
+  const {
+    returnDate,
+    numPersons: np,
+    numVehicles: nv,
+    noOfPersons,
+    personsCount,
+    fare,
+    ...rest
+  } = data as any;
+
+  const toIntMin1 = (v: any, def = 1) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 1 ? Math.floor(n) : def;
+  };
+
+  const updateData: any = {
+    ...rest,
+  };
+
+  // only set when supplied
+  if (returnDate !== undefined) {
+    updateData.returnDate = returnDate
+      ? new Date(`${returnDate}T00:00:00.000Z`)
+      : null;
   }
+
+  const personsU = np ?? noOfPersons ?? personsCount;
+  if (personsU !== undefined) {
+    updateData.numPersons = toIntMin1(personsU, 1);
+  }
+
+  if (nv !== undefined) {
+    updateData.numVehicles = toIntMin1(nv, 1);
+  }
+
+  if (fare !== undefined) {
+    updateData.fare = Number(fare) || 0;
+  }
+
+  return this.prisma.booking.update({
+    where: { id },
+    data: updateData,
+  });
+}
+
 
 async getAssignableVehicles(vehicleTypeId: number, user: { id: number; role: string }) {
   let vendorId: number | undefined;

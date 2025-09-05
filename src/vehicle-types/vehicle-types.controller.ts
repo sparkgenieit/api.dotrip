@@ -1,148 +1,109 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Param,
-  ParseIntPipe,
-  Patch,
   Post,
-  UploadedFile,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  UploadedFiles,
   UseInterceptors,
-  Req,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 import { VehicleTypesService } from './vehicle-types.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import type { File as MulterFile } from 'multer';
-import { extname, join } from 'path';
 import * as fs from 'fs';
-import type { Request } from 'express';
+import { join, extname } from 'path';
 
-
+// Multer storage (same pattern as Vehicles, different folder)
+const multerVehicleTypeStorage = diskStorage({
+  destination: (_req, _file, cb) => {
+    const uploadPath = join(process.cwd(), 'uploads', 'vehicle-types');
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
 
 @Controller('vehicle-types')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class VehicleTypesController {
   constructor(private readonly service: VehicleTypesService) {}
 
   // LIST
   @Get()
+  @Roles('ADMIN', 'VENDOR', 'DRIVER')
   findAll() {
     return this.service.findAll();
   }
 
-  // ✅ GET BY ID  -> fixes "Cannot GET /vehicle-types/:id"
+  // GET BY ID
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.service.findOne(id);
+  @Roles('ADMIN', 'VENDOR', 'DRIVER')
+  findOne(@Param('id') id: string) {
+    return this.service.findOne(+id);
   }
 
-// CREATE (inline image upload)
+  // CREATE (inline single image upload; field name: "image")
   @Post()
+  @Roles('ADMIN') // adjust if vendors should manage types
   @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          const dir = join(process.cwd(), 'uploads', 'vehicle-types');
-          fs.mkdirSync(dir, { recursive: true });
-          cb(null, dir);
-        },
-        filename: (_req, file, cb) => {
-          const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, unique + extname(file.originalname));
-        },
-      }),
-      fileFilter: (_req, file, cb) => {
-        if (!file.mimetype.startsWith('image/')) {
-          return cb(new Error('Only image files are allowed!'), false);
-        }
-        cb(null, true);
-      },
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    FileFieldsInterceptor([{ name: 'image', maxCount: 1 }], {
+      storage: multerVehicleTypeStorage,
     }),
   )
-  create(@Body() body: any, @UploadedFile() file?: MulterFile) {
-    if (file) {
-      // Save relative path; adjust to your DTO field as needed
-      const relPath = `uploads/vehicle-types/${file.filename}`;
-      body.image = relPath;
-      body.imageUrl = relPath;   // keep both for compatibility
-      body.image_url = relPath;
+  create(
+    @Body() body: any,
+    @UploadedFiles()
+    files: {
+      image?: MulterFile[];
+    },
+  ) {
+    if (files?.image?.[0]) {
+      body.image = `uploads/vehicle-types/${files.image[0].filename}`; // schema: String
+    } else {
+      // allow passing a URL/path via form field as fallback
+      body.image = body.image || body.imageUrl || body.image_url;
     }
     return this.service.create(body);
   }
 
-  // UPDATE (inline image upload; only overwrite if provided)
+  // UPDATE (inline single image upload; only replace if provided)
   @Patch(':id')
+  @Roles('ADMIN') // adjust if needed
   @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          const dir = join(process.cwd(), 'uploads', 'vehicle-types');
-          fs.mkdirSync(dir, { recursive: true });
-          cb(null, dir);
-        },
-        filename: (_req, file, cb) => {
-          const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, unique + extname(file.originalname));
-        },
-      }),
-      fileFilter: (_req, file, cb) => {
-        if (!file.mimetype.startsWith('image/')) {
-          return cb(new Error('Only image files are allowed!'), false);
-        }
-        cb(null, true);
-      },
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    FileFieldsInterceptor([{ name: 'image', maxCount: 1 }], {
+      storage: multerVehicleTypeStorage,
     }),
   )
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() body: any,
-    @UploadedFile() file?: MulterFile,
+    @UploadedFiles()
+    files: {
+      image?: MulterFile[];
+    },
   ) {
-    if (file) {
-      const relPath = `uploads/vehicle-types/${file.filename}`;
-      body.image = relPath;
-      body.imageUrl = relPath;
-      body.image_url = relPath;
+    if (files?.image?.[0]) {
+      body.image = `uploads/vehicle-types/${files.image[0].filename}`;
+    } else if (body.image || body.imageUrl || body.image_url) {
+      body.image = body.image || body.imageUrl || body.image_url;
     }
-    return this.service.update(id, body);
+    return this.service.update(+id, body);
   }
 
   // DELETE
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.service.remove(id);
+  @Roles('ADMIN')
+  remove(@Param('id') id: string) {
+    return this.service.remove(+id);
   }
-
-  @Post('upload')
-@UseInterceptors(
-  FileInterceptor('file', {
-    storage: diskStorage({
-      destination: (req, file, cb) => {
-        const dir = join(process.cwd(), 'uploads', 'vehicle-types');
-        fs.mkdirSync(dir, { recursive: true });
-        cb(null, dir);
-      },
-      filename: (req, file, cb) => {
-        const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, unique + extname(file.originalname));
-      },
-    }),
-    fileFilter: (req, file, cb) => {
-      // accept images only
-      if (!file.mimetype.startsWith('image/')) {
-        return cb(new Error('Only image files are allowed!'), false);
-      }
-      cb(null, true);
-    },
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  }),
-)
-upload(@UploadedFile() file: MulterFile, @Req() req: Request) {
-  const base = `${req.protocol}://${req.get('host')}`;
-  return { url: `${base}/uploads/vehicle-types/${file.filename}` };
 }
-}
-

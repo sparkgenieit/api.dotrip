@@ -16,6 +16,11 @@ export class CreateBookingDto {
   @IsDateString()
   pickupDateTime: string;
 
+  @IsOptional()
+  @IsDateString()
+  returnDate?: string;
+
+
   @IsNumber()
   fromCityId: number;
 
