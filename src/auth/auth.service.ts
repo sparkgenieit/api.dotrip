@@ -139,7 +139,7 @@ export class AuthService {
 
     if (!isTestAccount) {
       // await this.msg91Service.verifyOtp(mobileNumber, otp);
-      if (otp !== '123456') {
+      if (otp !== '1234') {
         throw new UnauthorizedException('Invalid OTP');
       }
     }

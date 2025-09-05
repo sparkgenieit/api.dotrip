@@ -18,40 +18,27 @@ export class PlacesService {
     this.apiKey = process.env.GOOGLE_MAPS_API_KEY;
   }
 
-async getAutocomplete(input: string, sessiontoken: string) {
-  const q = (input || '').trim();
-  if (!q) return [];
+ async getAutocomplete(input: string, sessiontoken: string) {
+    try {
+      const response = await this.client.placeAutocomplete({
+        params: {
+          input,
+          key: this.apiKey,
+          sessiontoken,
+          components: 'country:in',
+          types: 'geocode',
+          language: 'en',
+        },
+        timeout: 1000,
+      });
 
-  // Feature flag: bypass Google when the key is missing/expired or you set PLACES_DISABLE_GOOGLE=1
-  if (!this.apiKey || process.env.PLACES_DISABLE_GOOGLE === '1') {
-    return [];
-  }
-
-  try {
-    const response = await this.client.placeAutocomplete({
-      params: {
-        input: q,
-        key: this.apiKey,
-        sessiontoken,
-        components: 'country:in',
-        types: 'geocode',
-        language: 'en',
-      },
-      timeout: Number(process.env.GOOGLE_MAPS_TIMEOUT_MS ?? 5000), // more realistic than 1000
-    });
-
-    // Gracefully handle denials, over-quota, etc.
-    const data = response?.data;
-    if (data?.status === 'OK' && Array.isArray(data.predictions)) {
-      return data.predictions;
+      if (response.data.status !== 'OK') {
+        return [];
+      }
+      return response.data.predictions;
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException('Failed to fetch place predictions');
     }
-    return []; // REQUEST_DENIED / ZERO_RESULTS / anything else
-  } catch (err) {
-    // Do NOT throw → keep UI working while key is expired
-    // Optionally log a compact message:
-    // console.warn('Places autocomplete failed:', err?.response?.data?.status || err?.message);
-    return [];
   }
-}
-
 }

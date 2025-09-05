@@ -1,13 +1,9 @@
-import {
-  IsString,
-  IsEmail,
-  IsNumber,
-  IsDateString,
-  IsOptional,
-} from 'class-validator';
+import { IsString, IsDateString, IsOptional, IsInt, Min, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateBookingPublicDto {
-   @IsString()
+  @IsOptional()
+  @IsString()
   phone?: string;
 
   @IsString()
@@ -23,18 +19,44 @@ export class CreateBookingPublicDto {
   @IsDateString()
   returnDate?: string;
 
-  @IsNumber()
+  // ---- IDs (cast to number, validate as int)
+  @Type(() => Number)
+  @IsInt()
   fromCityId: number;
 
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
   toCityId: number;
 
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
   tripTypeId: number;
 
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
   vehicleTypeId: number;
 
+  // ---- NEW: persons/vehicles (these were missing)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  numPersons: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  numVehicles?: number;
+
+  // (Optional) accept common aliases without breaking validation
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1)
+  noOfPersons?: number;
+
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1)
+  personsCount?: number;
+
+  // Fare can be float
+  @Type(() => Number)
   @IsNumber()
   fare: number;
 }
