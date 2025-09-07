@@ -12,28 +12,21 @@ export class BookingService {
       phone,
       pickupLocation,
       dropoffLocation,
-      pickupDateTime,
+
+      // new split fields coming from the client
+      pickupDate,   // "YYYY-MM-DD"
+      pickupTime,   // "HH:mm"
+      returnDate,   // optional "YYYY-MM-DD"
+      returnTime,   // optional "HH:mm"
+
       fromCityId,
       toCityId,
       tripTypeId,
       vehicleTypeId,
       fare,
-      returnDate,
-      // possible aliases coming from clients:
-      noOfPersons,
-      personsCount,
+      numPersons = 1,
+      numVehicles = 1,
     } = dto;
-
-    // normalize numbers with min=1
-    const toIntMin1 = (v: any, def = 1) => {
-      const n = Number(v);
-      return Number.isFinite(n) && n >= 1 ? Math.floor(n) : def;
-    };
-
-    const numPersons = toIntMin1(dto?.numPersons ?? noOfPersons ?? personsCount, 1);
-    const numVehicles = toIntMin1(dto?.numVehicles, 1);
-    const fareNum = Number(fare ?? 0) || 0;
-
 
     const user = await this.prisma.user.findFirst({ where: { phone } });
     if (!user) throw new NotFoundException('User not found');
@@ -70,30 +63,40 @@ export class BookingService {
       },
     });
 
+    // helpers: HH:mm -> Date (for TIME); YYYY-MM-DD -> Date (for DATE)
+    const pad2 = (v: string | number) => String(v).padStart(2, '0');
+    const toTimeDate = (hhmm: string) => {
+      const [h = '00', m = '00'] = (hhmm || '').split(':');
+      // Prisma expects ISO-8601 DateTime; MySQL TIME ignores the date portion
+      return new Date(`1970-01-01T${pad2(+h)}:${pad2(+m)}:00.000Z`);
+    };
+    const toDateOnly = (d?: string | null) =>
+      d ? new Date(`${d}T00:00:00.000Z`) : null;
+
     return this.prisma.booking.create({
-          data: {
-            userId: user.id,
-            vehicleTypeId: Number(vehicleTypeId),
-            pickupAddressId: pickupAddress.id,
-            dropAddressId: dropAddress.id,
-            pickupDateTime: new Date(pickupDateTime),
+      data: {
+        userId: user.id,
+        vehicleTypeId,
+        pickupAddressId: pickupAddress.id,
+        dropAddressId: dropAddress.id,
 
-            // store date-only as midnight UTC (avoids TZ drift)
-            returnDate: returnDate ? new Date(`${returnDate}T00:00:00.000Z`) : null,
+        // align with Prisma types: DateTime @db.Date and DateTime @db.Time(0)
+        pickupDate: toDateOnly(pickupDate)!,          // required
+        pickupTime: toTimeDate(pickupTime),           // required
 
-            fromCityId: Number(fromCityId),
-            toCityId: Number(toCityId),
-            tripTypeId: Number(tripTypeId),
+        returnDate: toDateOnly(returnDate),           // optional
+        returnTime: returnTime ? toTimeDate(returnTime) : null,
 
-            // normalized numbers
-            fare: fareNum,
-            numPersons,
-            numVehicles,
-
-            status: 'PENDING',
-          },
-        });
-        }
+        fromCityId,
+        toCityId,
+        tripTypeId,
+        fare,
+        numPersons,
+        numVehicles,
+        status: 'PENDING',
+      },
+    });
+  }
 
 async findAll(user?: { id: number; role?: string }) {
   let where: Prisma.BookingWhereInput | undefined;
@@ -147,54 +150,39 @@ async findAll(user?: { id: number; role?: string }) {
     });
   }
 
-  async update(id: number, data: UpdateBookingDto) {
+async update(id: number, data: any) {
+  // optional: ensure record exists
   await this.findOne(id);
 
   const {
+    pickupDate,
+    pickupTime,
     returnDate,
-    numPersons: np,
-    numVehicles: nv,
-    noOfPersons,
-    personsCount,
-    fare,
+    returnTime,
     ...rest
-  } = data as any;
+  } = data ?? {};
 
-  const toIntMin1 = (v: any, def = 1) => {
-    const n = Number(v);
-    return Number.isFinite(n) && n >= 1 ? Math.floor(n) : def;
+  const pad2 = (v: string | number) => String(v).padStart(2, '0');
+  const toTimeDate = (hhmm: string) => {
+    const [h = '00', m = '00'] = (hhmm || '').split(':');
+    return new Date(`1970-01-01T${pad2(+h)}:${pad2(+m)}:00.000Z`);
   };
-
-  const updateData: any = {
-    ...rest,
-  };
-
-  // only set when supplied
-  if (returnDate !== undefined) {
-    updateData.returnDate = returnDate
-      ? new Date(`${returnDate}T00:00:00.000Z`)
-      : null;
-  }
-
-  const personsU = np ?? noOfPersons ?? personsCount;
-  if (personsU !== undefined) {
-    updateData.numPersons = toIntMin1(personsU, 1);
-  }
-
-  if (nv !== undefined) {
-    updateData.numVehicles = toIntMin1(nv, 1);
-  }
-
-  if (fare !== undefined) {
-    updateData.fare = Number(fare) || 0;
-  }
+  const toDateOnly = (d?: string | null) =>
+    d ? new Date(`${d}T00:00:00.000Z`) : null;
 
   return this.prisma.booking.update({
     where: { id },
-    data: updateData,
+    data: {
+      ...rest,
+      ...(pickupDate !== undefined && { pickupDate: toDateOnly(pickupDate) }),
+      ...(pickupTime !== undefined && { pickupTime: toTimeDate(pickupTime) }),
+      ...(returnDate !== undefined && { returnDate: toDateOnly(returnDate) }),
+      ...(returnTime !== undefined && {
+        returnTime: returnTime ? toTimeDate(returnTime) : null,
+      }),
+    },
   });
 }
-
 
 async getAssignableVehicles(vehicleTypeId: number, user: { id: number; role: string }) {
   let vendorId: number | undefined;

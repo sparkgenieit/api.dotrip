@@ -217,18 +217,24 @@ model Booking {
   vehicleTypeId    Int
   pickupAddressId  Int
   dropAddressId    Int
-  pickupDateTime   DateTime
-  returnDate       DateTime?         // ✅ NEW: optional return date for round trips
+
+  // Date-only and time-only
+  pickupDate       DateTime?          @db.Date        // YYYY-MM-DD (no time)
+  pickupTime       DateTime?          @db.Time(0)     // HH:MM:SS (no date)
+  returnDate       DateTime?         @db.Date        // optional date (round trip)
+  returnTime       DateTime?         @db.Time(0)     // optional time (round trip)
+
   fromCityId       Int
   toCityId         Int
   tripTypeId       Int
   fare             Float
-  numPersons       Int               @default(1) // ✅ Default added
-  numVehicles      Int               @default(1) // ✅ Default added
+  numPersons       Int               @default(1)
+  numVehicles      Int               @default(1)
   bookingType      String            @default("individual")
   status           String            @default("PENDING")
   createdAt        DateTime          @default(now())
-  vendorId         Int? // ✅ Added — vendor assigned after quote approval
+
+  vendorId         Int?
   vendor           Vendor?           @relation(fields: [vendorId], references: [id])
   quotes           Quote[]
   user             User              @relation("UserBookings", fields: [userId], references: [id])
@@ -241,10 +247,9 @@ model Booking {
   TripType         TripType          @relation(fields: [tripTypeId], references: [id])
   CorporateBooking CorporateBooking?
 
-  // ✅ New: multi-city stop support
-  stopCities City[] @relation("BookingStopCities")
+  // multi-city stop support
+  stopCities       City[]            @relation("BookingStopCities")
 }
-
 
 model Quote {
   id        Int      @id @default(autoincrement())
