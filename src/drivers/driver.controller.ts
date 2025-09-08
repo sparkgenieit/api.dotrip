@@ -46,6 +46,7 @@ export class DriverController {
   @UseInterceptors(
     FileFieldsInterceptor(
       [
+        { name: 'profileImage', maxCount: 1 }, // ✅ NEW
         { name: 'licenseImage', maxCount: 1 },
         { name: 'rcImage', maxCount: 1 },
       ],
@@ -55,12 +56,16 @@ export class DriverController {
   async create(
     @UploadedFiles()
     files: {
-        licenseImage?: MulterFile[];
-        rcImage?: MulterFile[];
+      profileImage?: MulterFile[];
+      licenseImage?: MulterFile[];
+      rcImage?: MulterFile[];
     },
     @Body() dto: CreateDriverDto,
     @Req() req: AuthRequest,
   ) {
+    if (files.profileImage?.[0]) {
+      dto.profileImage = `uploads/drivers/${files.profileImage[0].filename}`;
+    }
     if (files.licenseImage?.[0]) {
       dto.licenseImage = `uploads/drivers/${files.licenseImage[0].filename}`;
     }
@@ -94,37 +99,39 @@ export class DriverController {
   }
 
   @Patch(':id')
-@UseInterceptors(
-  FileFieldsInterceptor(
-    [
-      { name: 'licenseImage', maxCount: 1 },
-      { name: 'rcImage', maxCount: 1 },
-    ],
-    { storage: multerDriverStorage },
-  ),
-)
-async updateMultipart(
-  @Param('id') id: string,
-  @UploadedFiles()
-  files: {
-    licenseImage?: MulterFile[];
-    rcImage?: MulterFile[];
-  },
-  @Body() dto: UpdateDriverDto,
-  @Req() req: AuthRequest,
-) {
-  if (files.licenseImage?.[0]) {
-    dto.licenseImage = `uploads/drivers/${files.licenseImage[0].filename}`;
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'profileImage', maxCount: 1 }, // ✅ NEW
+        { name: 'licenseImage', maxCount: 1 },
+        { name: 'rcImage', maxCount: 1 },
+      ],
+      { storage: multerDriverStorage },
+    ),
+  )
+  async updateMultipart(
+    @Param('id') id: string,
+    @UploadedFiles()
+    files: {
+      profileImage?: MulterFile[];
+      licenseImage?: MulterFile[];
+      rcImage?: MulterFile[];
+    },
+    @Body() dto: UpdateDriverDto,
+    @Req() req: AuthRequest,
+  ) {
+    if (files.profileImage?.[0]) {
+      dto.profileImage = `uploads/drivers/${files.profileImage[0].filename}`;
+    }
+    if (files.licenseImage?.[0]) {
+      dto.licenseImage = `uploads/drivers/${files.licenseImage[0].filename}`;
+    }
+    if (files.rcImage?.[0]) {
+      dto.rcImage = `uploads/drivers/${files.rcImage[0].filename}`;
+    }
+
+    return this.driverService.update(+id, dto);
   }
-  if (files.rcImage?.[0]) {
-    dto.rcImage = `uploads/drivers/${files.rcImage[0].filename}`;
-  }
-
-  return this.driverService.update(+id, dto);
-}
-
-
-
 
   @Delete(':id')
   remove(@Param('id') id: string) {

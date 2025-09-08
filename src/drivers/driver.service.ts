@@ -16,43 +16,58 @@ export class DriverService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateDriverDto) {
-    const password = await bcrypt.hash('123123', 10);
-    return this.prisma.driver.create({
-      data: {
-        fullName: dto.fullName,
-        phone: dto.phone,
-        email: dto.email,
-        licenseNumber: dto.licenseNumber,
-        licenseExpiry: new Date(dto.licenseExpiry),
-        isPartTime: dto.isPartTime ?? false,
-        isAvailable: dto.isAvailable ?? true,
-        licenseImage: dto.licenseImage,
-        rcImage: dto.rcImage,
+  const password = await bcrypt.hash('123123', 10);
 
-        vendor: dto.vendorId
-          ? {
-              connect: { id: dto.vendorId },
-            }
-          : undefined,
+  return this.prisma.driver.create({
+    data: {
+      fullName: dto.fullName,
+      phone: dto.phone,
+      email: dto.email,
+      licenseNumber: dto.licenseNumber,
+      licenseExpiry: new Date(dto.licenseExpiry),
+      isPartTime: dto.isPartTime ?? false,
+      isAvailable: dto.isAvailable ?? true,
 
-        assignedVehicle: dto.vehicleId
-          ? {
-              connect: { id: dto.vehicleId },
-            }
-          : undefined,
+      // images
+      licenseImage: dto.licenseImage,
+      rcImage: dto.rcImage,
+      profileImage: dto.profileImage, // NEW
 
-        user: {
-          create: {
-            name: dto.fullName,
-            email: dto.email,
-            phone: dto.phone,
-            password: password, // already hashed
-            role: 'DRIVER',
-          },
+      // new profile fields
+      whatsappPhone: dto.whatsappPhone,
+      altPhone: dto.altPhone,
+      licenseIssueDate: dto.licenseIssueDate ? new Date(dto.licenseIssueDate) : undefined,
+      dob: dto.dob ? new Date(dto.dob) : undefined,
+      gender: dto.gender,
+      bloodGroup: dto.bloodGroup,
+      aadhaarNumber: dto.aadhaarNumber,
+      panNumber: dto.panNumber,
+      voterId: dto.voterId,
+      address: dto.address,
+
+      // relations
+      vendor: dto.vendorId ? { connect: { id: dto.vendorId } } : undefined,
+
+      // (optional) allow assign-on-create if vehicleId posted
+      assignedVehicle: dto.vehicleId ? { connect: { id: dto.vehicleId } } : undefined,
+
+      user: {
+        create: {
+          name: dto.fullName,
+          email: dto.email,
+          phone: dto.phone,
+          password: password, // already hashed
+          role: 'DRIVER',
         },
       },
-    });
-  }
+    },
+    include: {
+      assignedVehicle: true,
+      vendor: true,
+      user: true,
+    },
+  });
+}
 
   async createDriverByRole(dto: CreateDriverDto, user: any) {
     if (user.role === 'VENDOR') {
@@ -109,69 +124,92 @@ export class DriverService {
   }
 
   async findOne(id: number) {
-    return this.prisma.driver.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        fullName: true,
-        phone: true,
-        email: true,
-        licenseNumber: true,
-        licenseExpiry: true,
-        isPartTime: true,
-        isAvailable: true,
-        licenseImage: true,
-        rcImage: true,
-        vendorId: true,
-        assignedVehicleId: true,
-        userId: true,
-        assignedVehicle: true,
-        vendor: true,
-        user: true,
-      },
-    });
-  }
+  return this.prisma.driver.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      fullName: true,
+      phone: true,
+      email: true,
+      licenseNumber: true,
+      licenseExpiry: true,
+      isPartTime: true,
+      isAvailable: true,
+
+      // images
+      licenseImage: true,
+      rcImage: true,
+      profileImage: true, // NEW
+
+      // new profile fields
+      whatsappPhone: true,
+      altPhone: true,
+      licenseIssueDate: true,
+      dob: true,
+      gender: true,
+      bloodGroup: true,
+      aadhaarNumber: true,
+      panNumber: true,
+      voterId: true,
+      address: true,
+
+      vendorId: true,
+      assignedVehicleId: true,
+      userId: true,
+      assignedVehicle: true,
+      vendor: true,
+      user: true,
+    },
+  });
+}
 
   // ✅ Partial, safe update. Only updates fields that are provided.
   //    Also writes licenseImage / rcImage when controller sets them.
   async update(id: number, dto: UpdateDriverDto) {
     const data: Prisma.DriverUpdateInput = {};
 
+    // basics
     if (dto.fullName !== undefined) data.fullName = dto.fullName;
     if (dto.phone !== undefined) data.phone = dto.phone;
     if (dto.email !== undefined) data.email = dto.email;
     if (dto.licenseNumber !== undefined) data.licenseNumber = dto.licenseNumber;
 
-    // licenseExpiry only if provided and non-empty
-    if (
-      dto.licenseExpiry !== undefined &&
-      dto.licenseExpiry !== null &&
-      dto.licenseExpiry !== ''
-    ) {
-      data.licenseExpiry = new Date(dto.licenseExpiry as any);
-    }
+    // dates
+    if (dto.licenseExpiry) data.licenseExpiry = new Date(dto.licenseExpiry);
 
     // booleans
     if (typeof dto.isPartTime === 'boolean') data.isPartTime = dto.isPartTime;
     if (typeof dto.isAvailable === 'boolean') data.isAvailable = dto.isAvailable;
 
-    // images from multipart
+    // images
     if (dto.licenseImage !== undefined) data.licenseImage = dto.licenseImage;
     if (dto.rcImage !== undefined) data.rcImage = dto.rcImage;
+    if (dto.profileImage !== undefined) data.profileImage = dto.profileImage; // NEW
 
-    // vendor relation: connect / disconnect only if explicitly sent
+    // new profile fields
+    if (dto.whatsappPhone !== undefined) data.whatsappPhone = dto.whatsappPhone;
+    if (dto.altPhone !== undefined) data.altPhone = dto.altPhone;
+    if (dto.licenseIssueDate) data.licenseIssueDate = new Date(dto.licenseIssueDate);
+    if (dto.dob) data.dob = new Date(dto.dob);
+    if (dto.gender !== undefined) data.gender = dto.gender;
+    if (dto.bloodGroup !== undefined) data.bloodGroup = dto.bloodGroup;
+    if (dto.aadhaarNumber !== undefined) data.aadhaarNumber = dto.aadhaarNumber;
+    if (dto.panNumber !== undefined) data.panNumber = dto.panNumber;
+    if (dto.voterId !== undefined) data.voterId = dto.voterId;
+    if (dto.address !== undefined) data.address = dto.address;
+
+    // relations
     if (dto.vendorId !== undefined) {
-      if (dto.vendorId === null) {
+      if (dto.vendorId === null as any) {
         data.vendor = { disconnect: true };
       } else {
         data.vendor = { connect: { id: Number(dto.vendorId) } };
       }
     }
 
-    // assigned vehicle relation: connect / disconnect only if explicitly sent
-    // Expecting field name "assignedVehicleId" on UpdateDriverDto
+    // Prefer PATCH /drivers/assign, but allow direct update if sent
     if (dto.assignedVehicleId !== undefined) {
-      if (dto.assignedVehicleId === null) {
+      if (dto.assignedVehicleId === null as any) {
         data.assignedVehicle = { disconnect: true };
       } else {
         data.assignedVehicle = { connect: { id: Number(dto.assignedVehicleId) } };
@@ -181,6 +219,11 @@ export class DriverService {
     return this.prisma.driver.update({
       where: { id },
       data,
+      include: {
+        assignedVehicle: true,
+        vendor: true,
+        user: true,
+      },
     });
   }
 

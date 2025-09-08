@@ -97,6 +97,12 @@ model Vehicle {
   vehicleTypeId      Int
   createdBy          Role      @default(VENDOR) // either VENDOR or DRIVER
 
+  insurancePolicyNumber  String?
+  insuranceStartDate     DateTime?   @db.Date
+  insuranceEndDate       DateTime?   @db.Date
+  insuranceContactNumber String?
+  rtoCode                String?
+
   // Owner (Vendor or Driver)
   vendorId      Int?
   vendor        Vendor? @relation(fields: [vendorId], references: [id])
@@ -129,6 +135,18 @@ model Driver {
   isAvailable   Boolean  @default(true)
   licenseImage  String // ✅ NEW
   rcImage       String // ✅ NEW
+  profileImage  String? 
+
+  whatsappPhone    String?     // NEW
+  altPhone         String?     // NEW
+  licenseIssueDate DateTime?   // NEW
+  dob              DateTime?   // NEW
+  gender           String?     // NEW  (e.g., "Male" | "Female" | "Other")
+  bloodGroup       String?     // NEW  (e.g., "A+", "O-", etc.)
+  aadhaarNumber    String?     // NEW
+  panNumber        String?     // NEW
+  voterId          String?     // NEW
+  address          String?     // NEW
 
   assignedVehicleId Int?     @unique
   assignedVehicle   Vehicle? @relation("VehicleToDriver", fields: [assignedVehicleId], references: [id]) // ✅ Backward link

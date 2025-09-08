@@ -58,7 +58,15 @@ files: {
   },
 ) {
   if (files?.images?.length) {
-    createVehicleDto.image = files.images.map(file => `uploads/vehicles/${file.filename}`);
+    const createImages =
+  Array.isArray(files?.images)
+    ? files.images.map((f: any) => `uploads/vehicles/${f.filename}`)
+    : [];
+
+  if (createImages.length) {
+    // Prisma schema expects a single string for `image`
+    createVehicleDto.image = createImages[0];
+  }
   }
 
   return this.vehiclesService.create(createVehicleDto, req.user);
@@ -107,7 +115,14 @@ files: {
   },
 ) {
   if (files?.images?.length) {
-    updateVehicleDto.image = files.images.map(file => `uploads/vehicles/${file.filename}`);
+    const updateImages =
+  Array.isArray(files?.images)
+    ? files.images.map((f: any) => `uploads/vehicles/${f.filename}`)
+    : [];
+
+  if (updateImages.length) {
+    updateVehicleDto.image = updateImages[0];
+  }
   }
 
   return this.vehiclesService.update(+id, updateVehicleDto);
