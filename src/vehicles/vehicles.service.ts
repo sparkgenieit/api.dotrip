@@ -3,6 +3,18 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CreateVehicleDto } from "./dto/create-vehicle.dto";
 import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
 
+function toDateOrNull(s?: string | null): Date | null {
+  if (!s) return null;
+  // "YYYY-MM-DD" → ok
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00.000Z');
+  // "DD-MM-YYYY" → convert
+  const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(s);
+  if (m) return new Date(`${m[3]}-${m[2]}-${m[1]}T00:00:00.000Z`);
+  // fallback
+  const d = new Date(s);
+  return isNaN(+d) ? null : d;
+}
+
 @Injectable()
 export class VehiclesService {
   constructor(private prisma: PrismaService) {}
@@ -53,7 +65,7 @@ async getAvailableVehicles(typeId: number, vendorUserId: number) {
 async create(
   dto: CreateVehicleDto & {
     priceId?: number;
-    priceSpec?: { priceType: string; price: number };
+    priceSpec?: { priceType: string; price: number; originalPrice?: number };
   },
   current: {
     userId?: number;
@@ -63,27 +75,60 @@ async create(
   }
 ) {
   // ✅ Always coerce to a single string (schema expects String, not String[])
-  const singleImage = Array.isArray(dto.image) ? (dto.image[0] ?? undefined) : dto.image;
+const singleImage = Array.isArray(dto.image) ? (dto.image[0] ?? undefined) : dto.image;
 
-  const data: any = {
-    name: dto.name,
-    model: dto.model,
-    image: singleImage, // ✅ normalized string
-    capacity: dto.capacity,
-    price: dto.priceSpec?.price ?? dto.price ?? 0,
-    originalPrice:
-      dto.priceSpec?.originalPrice ??
-      dto.priceSpec?.price ??
-      dto.originalPrice ??
-      dto.price ??
-      0,
-    registrationNumber: dto.registrationNumber,
-    vehicleTypeId: dto.vehicleTypeId,
-    status: dto.status ?? 'available',
-    comfortLevel: dto.comfortLevel ?? 3,
-    lastServicedDate: dto.lastServicedDate ? new Date(dto.lastServicedDate) : undefined,
-    createdBy: current.role,
-  };
+// normalize priceSpec and dates
+  const rawCreate = dto as any;
+  const psCreate =
+    rawCreate.priceSpec ??
+    (
+      (rawCreate['priceSpec[price]'] !== undefined) ||
+      (rawCreate['priceSpec[originalPrice]'] !== undefined) ||
+      (rawCreate['priceSpec[priceType]'] !== undefined) ||
+      (rawCreate['priceSpec[currency]'] !== undefined)
+    ? {
+        priceType: rawCreate['priceSpec[priceType]'],
+        price: rawCreate['priceSpec[price]'] !== undefined ? Number(rawCreate['priceSpec[price]']) : undefined,
+        originalPrice: rawCreate['priceSpec[originalPrice]'] !== undefined ? Number(rawCreate['priceSpec[originalPrice]']) : undefined,
+        currency: rawCreate['priceSpec[currency]'],
+      }
+    : undefined
+    );
+const lastServiceAt = dto.lastServicedDate ? toDateOrNull(dto.lastServicedDate as any) : undefined;
+
+const data: any = {
+  name: dto.name,
+  model: dto.model,
+  image: singleImage, // ✅ normalized string
+  capacity: dto.capacity,
+
+  // prices with robust fallbacks
+  price: (typeof psCreate?.price === 'number' ? psCreate.price : (dto.price ?? 0)),
+  originalPrice: (typeof psCreate?.originalPrice === 'number'
+    ? psCreate.originalPrice
+
+    : (typeof psCreate?.price === 'number'
+        ? psCreate.price
+        : (dto.originalPrice ?? dto.price ?? 0))),
+
+
+  registrationNumber: dto.registrationNumber,
+  vehicleTypeId: dto.vehicleTypeId,
+  status: dto.status ?? 'available',
+  comfortLevel: dto.comfortLevel ?? 3,
+
+  // unified date parsing
+  lastServicedDate: lastServiceAt,
+
+  createdBy: current.role as any,
+
+  // Insurance & FC
+  insurancePolicyNumber: dto.insurancePolicyNumber ?? null,
+  insuranceContactNumber: dto.insuranceContactNumber ?? null,
+  rtoCode: dto.rtoCode ?? null,
+  insuranceStartDate: toDateOrNull(dto.insuranceStartDate as any),
+  insuranceEndDate: toDateOrNull(dto.insuranceEndDate as any),
+};
 
   // Owner (Vendor or Driver)
   if (current.role === 'VENDOR' && current.vendorId) {
@@ -95,39 +140,58 @@ async create(
   }
 
   // ── PRICE RELATION HANDLING (Vehicle has priceId FK; no `vehiclePrice` relation field) ──
-  let priceId: number | null = null;
+  let priceId: number;
+
+  // Expand priceSpec even if fields came in as priceSpec[...]
+  const raw = dto as any;
+  const ps =
+    raw.priceSpec ??
+    (
+      (raw['priceSpec[price]'] !== undefined) ||
+      (raw['priceSpec[originalPrice]'] !== undefined) ||
+      (raw['priceSpec[priceType]'] !== undefined) ||
+      (raw['priceSpec[currency]'] !== undefined)
+    ? {
+        priceType: raw['priceSpec[priceType]'],
+        price: raw['priceSpec[price]'] !== undefined ? Number(raw['priceSpec[price]']) : undefined,
+        originalPrice: raw['priceSpec[originalPrice]'] !== undefined ? Number(raw['priceSpec[originalPrice]']) : undefined,
+        currency: raw['priceSpec[currency]'],
+      }
+    : undefined
+    );
 
   if (dto.priceId) {
+    // honor an explicit priceId
     const exists = await this.prisma.price.findUnique({
       where: { id: dto.priceId },
       select: { id: true },
     });
     if (!exists) throw new NotFoundException(`Price with ID ${dto.priceId} not found`);
     priceId = dto.priceId;
-  } else if (dto.priceSpec) {
+  } else if (ps && typeof ps.price === 'number') {
+    // create a Price row from provided spec
     const created = await this.prisma.price.create({
       data: {
-        priceType: dto.priceSpec.priceType ?? 'BASE',
-        price: dto.priceSpec.price,
+        priceType: ps.priceType ?? 'BASE',
+        price: ps.price,
       },
       select: { id: true },
     });
     priceId = created.id;
   } else {
-    const defaultId = 10;
-    const defaultExists = await this.prisma.price.findUnique({
-      where: { id: defaultId },
+    // final fallback: synthesize a BASE price from dto.price or 0
+    const base = typeof dto.price === 'number' ? dto.price : 0;
+    const created = await this.prisma.price.create({
+      data: {
+        priceType: 'BASE',
+        price: base,
+      },
       select: { id: true },
     });
-    if (!defaultExists) {
-      throw new NotFoundException(
-        `No price provided and default priceId=${defaultId} does not exist. Provide { priceId } or { priceSpec: { priceType, price } } or create a Price row with id=${defaultId}.`,
-      );
-    }
-    priceId = defaultId;
+    priceId = created.id;
   }
 
-  if (priceId) data.priceId = priceId;
+  data.priceId = priceId;
 
   return this.prisma.vehicle.create({
     data,
@@ -139,6 +203,8 @@ async create(
   });
 }
 
+// REPLACE this whole block in src/vehicles/vehicles.service.ts  (#realcode)
+
 async update(id: number, dto: UpdateVehicleDto) {
   // Pull out fields needing special handling; keep rest as-is
   const {
@@ -147,6 +213,14 @@ async update(id: number, dto: UpdateVehicleDto) {
     lastServicedDate,
     priceSpec,     // ❌ not a Vehicle column (we'll map it)
     image,         // may arrive as string or string[]
+
+    // ✅ NEW: Insurance & FC fields
+    insurancePolicyNumber,
+    insuranceStartDate,
+    insuranceEndDate,
+    insuranceContactNumber,
+    rtoCode,
+
     ...rest
   } = dto as any;
 
@@ -180,9 +254,43 @@ async update(id: number, dto: UpdateVehicleDto) {
   }
 
   // ✅ map priceSpec (if caller still sends it) into Vehicle scalars
-  if (priceSpec) {
-    if (typeof priceSpec.price === 'number') data.price = priceSpec.price;
-    if (typeof priceSpec.originalPrice === 'number') data.originalPrice = priceSpec.originalPrice;
+  const raw = dto as any;
+  const psUpdate =
+    priceSpec ??
+    (
+      (raw['priceSpec[price]'] !== undefined) ||
+      (raw['priceSpec[originalPrice]'] !== undefined) ||
+      (raw['priceSpec[priceType]'] !== undefined) ||
+      (raw['priceSpec[currency]'] !== undefined)
+    ? {
+        priceType: raw['priceSpec[priceType]'],
+        price: raw['priceSpec[price]'] !== undefined ? Number(raw['priceSpec[price]']) : undefined,
+        originalPrice: raw['priceSpec[originalPrice]'] !== undefined ? Number(raw['priceSpec[originalPrice]']) : undefined,
+        currency: raw['priceSpec[currency]'],
+      }
+    : undefined
+    );
+
+  if (psUpdate) {
+    if (typeof psUpdate.price === 'number') data.price = psUpdate.price;
+    if (typeof psUpdate.originalPrice === 'number') data.originalPrice = psUpdate.originalPrice;
+  }
+
+  // ✅ NEW: Insurance & FC mapping
+  if (typeof insurancePolicyNumber !== 'undefined') {
+    data.insurancePolicyNumber = String(insurancePolicyNumber || '').trim() || null;
+  }
+  if (typeof insuranceContactNumber !== 'undefined') {
+    data.insuranceContactNumber = String(insuranceContactNumber || '').trim() || null;
+  }
+  if (typeof rtoCode !== 'undefined') {
+    data.rtoCode = String(rtoCode || '').trim() || null;
+  }
+  if (typeof insuranceStartDate !== 'undefined') {
+    data.insuranceStartDate = toDateOrNull(insuranceStartDate);
+  }
+  if (typeof insuranceEndDate !== 'undefined') {
+    data.insuranceEndDate = toDateOrNull(insuranceEndDate);
   }
 
   // ❌ ensure forbidden keys never reach Prisma `data`
@@ -195,20 +303,20 @@ async update(id: number, dto: UpdateVehicleDto) {
   });
 }
 
-  async remove(id: number) {
-    await this.findOne(id);
-    return this.prisma.vehicle.delete({ where: { id } });
-  }
+async remove(id: number) {
+  await this.findOne(id);
+  return this.prisma.vehicle.delete({ where: { id } });
+}
 
-  async register(
-    dto: CreateVehicleDto,
-    current: {
-      userId?: number;
-      role: string;
-      vendorId?: number;
-      driverId?: number;
-    }
-  ) {
-    return this.create(dto, current);
+async register(
+  dto: CreateVehicleDto,
+  current: {
+    userId?: number;
+    role: string;
+    vendorId?: number;
+    driverId?: number;
   }
+) {
+  return this.create(dto, current);
+}
 }

@@ -97,6 +97,12 @@ model Vehicle {
   vehicleTypeId      Int
   createdBy          Role      @default(VENDOR) // either VENDOR or DRIVER
 
+  insurancePolicyNumber  String?
+  insuranceStartDate     DateTime?   @db.Date
+  insuranceEndDate       DateTime?   @db.Date
+  insuranceContactNumber String?
+  rtoCode                String?
+
   // Owner (Vendor or Driver)
   vendorId      Int?
   vendor        Vendor? @relation(fields: [vendorId], references: [id])
@@ -129,6 +135,18 @@ model Driver {
   isAvailable   Boolean  @default(true)
   licenseImage  String // ✅ NEW
   rcImage       String // ✅ NEW
+  profileImage  String? 
+
+  whatsappPhone    String?     // NEW
+  altPhone         String?     // NEW
+  licenseIssueDate DateTime?   // NEW
+  dob              DateTime?   // NEW
+  gender           String?     // NEW  (e.g., "Male" | "Female" | "Other")
+  bloodGroup       String?     // NEW  (e.g., "A+", "O-", etc.)
+  aadhaarNumber    String?     // NEW
+  panNumber        String?     // NEW
+  voterId          String?     // NEW
+  address          String?     // NEW
 
   assignedVehicleId Int?     @unique
   assignedVehicle   Vehicle? @relation("VehicleToDriver", fields: [assignedVehicleId], references: [id]) // ✅ Backward link
@@ -217,18 +235,24 @@ model Booking {
   vehicleTypeId    Int
   pickupAddressId  Int
   dropAddressId    Int
-  pickupDateTime   DateTime
-  returnDate       DateTime?         // ✅ NEW: optional return date for round trips
+
+  // Date-only and time-only
+  pickupDate       DateTime?          @db.Date        // YYYY-MM-DD (no time)
+  pickupTime       DateTime?          @db.Time(0)     // HH:MM:SS (no date)
+  returnDate       DateTime?         @db.Date        // optional date (round trip)
+  returnTime       DateTime?         @db.Time(0)     // optional time (round trip)
+
   fromCityId       Int
   toCityId         Int
   tripTypeId       Int
   fare             Float
-  numPersons       Int               @default(1) // ✅ Default added
-  numVehicles      Int               @default(1) // ✅ Default added
+  numPersons       Int               @default(1)
+  numVehicles      Int               @default(1)
   bookingType      String            @default("individual")
   status           String            @default("PENDING")
   createdAt        DateTime          @default(now())
-  vendorId         Int? // ✅ Added — vendor assigned after quote approval
+
+  vendorId         Int?
   vendor           Vendor?           @relation(fields: [vendorId], references: [id])
   quotes           Quote[]
   user             User              @relation("UserBookings", fields: [userId], references: [id])
@@ -241,10 +265,9 @@ model Booking {
   TripType         TripType          @relation(fields: [tripTypeId], references: [id])
   CorporateBooking CorporateBooking?
 
-  // ✅ New: multi-city stop support
-  stopCities City[] @relation("BookingStopCities")
+  // multi-city stop support
+  stopCities       City[]            @relation("BookingStopCities")
 }
-
 
 model Quote {
   id        Int      @id @default(autoincrement())

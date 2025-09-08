@@ -1,4 +1,8 @@
-import { IsNotEmpty, IsNumber, IsDateString, IsEnum, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsDateString, IsOptional, IsInt, Min, Matches, IsString } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
+
+const EmptyToUndefined = () =>
+  Transform(({ value }) => (typeof value === 'string' && value.trim() === '' ? undefined : value));
 
 export class CreateBookingDto {
   @IsNumber()
@@ -13,13 +17,18 @@ export class CreateBookingDto {
   @IsNumber()
   dropAddressId: number;
 
+  // NEW: split pickupDate/time + optional returnDate/time
   @IsDateString()
-  pickupDateTime: string;
+  pickupDate: string;
 
-  @IsOptional()
-  @IsDateString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  pickupTime: string;
+
+  @IsOptional() @IsDateString() @EmptyToUndefined()
   returnDate?: string;
 
+  @IsOptional() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) @EmptyToUndefined()
+  returnTime?: string;
 
   @IsNumber()
   fromCityId: number;
@@ -35,12 +44,10 @@ export class CreateBookingDto {
 
   @IsNotEmpty()
   status: string;
-  
-  @IsNumber()
-  @IsOptional()
+
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1)
   numPersons?: number;
 
-  @IsNumber()
-  @IsOptional()
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1)
   numVehicles?: number;
 }

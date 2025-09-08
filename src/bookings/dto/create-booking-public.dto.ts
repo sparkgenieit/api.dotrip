@@ -1,5 +1,10 @@
-import { IsString, IsDateString, IsOptional, IsInt, Min, IsNumber } from 'class-validator';
-import { Type } from 'class-transformer';
+
+import { IsString, IsDateString, IsOptional, IsInt, Min, IsNumber, Matches } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
+
+// helper to normalize empty strings to undefined
+const EmptyToUndefined = () =>
+  Transform(({ value }) => (typeof value === 'string' && value.trim() === '' ? undefined : value));
 
 export class CreateBookingPublicDto {
   @IsOptional()
@@ -12,12 +17,25 @@ export class CreateBookingPublicDto {
   @IsString()
   dropoffLocation: string;
 
+  // NEW: date-only (YYYY-MM-DD)
   @IsDateString()
-  pickupDateTime: string;
+  pickupDate: string;
 
+  // NEW: time-only (HH:mm, 24h)
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'pickupTime must be HH:mm' })
+  pickupTime: string;
+
+  // NEW: optional date-only for round trips
   @IsOptional()
   @IsDateString()
+  @EmptyToUndefined()
   returnDate?: string;
+
+  // NEW: optional time-only (HH:mm) for round trips
+  @IsOptional()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'returnTime must be HH:mm' })
+  @EmptyToUndefined()
+  returnTime?: string;
 
   // ---- IDs (cast to number, validate as int)
   @Type(() => Number)
@@ -36,7 +54,7 @@ export class CreateBookingPublicDto {
   @IsInt()
   vehicleTypeId: number;
 
-  // ---- NEW: persons/vehicles (these were missing)
+  // Passengers/vehicles
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -48,14 +66,14 @@ export class CreateBookingPublicDto {
   @Min(1)
   numVehicles?: number;
 
-  // (Optional) accept common aliases without breaking validation
+  // Common aliases (optional)
   @IsOptional() @Type(() => Number) @IsInt() @Min(1)
   noOfPersons?: number;
 
   @IsOptional() @Type(() => Number) @IsInt() @Min(1)
   personsCount?: number;
 
-  // Fare can be float
+  // Fare (float)
   @Type(() => Number)
   @IsNumber()
   fare: number;

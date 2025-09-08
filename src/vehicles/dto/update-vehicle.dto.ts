@@ -1,7 +1,5 @@
+// src/vehicles/dto/update-vehicle.dto.ts
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateVehicleDto } from './create-vehicle.dto';
-import { IsOptional, IsInt } from 'class-validator';
 
-export class UpdateVehicleDto extends PartialType(CreateVehicleDto) {
- 
-}
+export class UpdateVehicleDto extends PartialType(CreateVehicleDto) {}
