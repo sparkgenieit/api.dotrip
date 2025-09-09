@@ -123,45 +123,100 @@ model Price {
   vehicles  Vehicle[]
 }
 
-// ✅ Updated Prisma Schema for Driver model with new UI fields
 model Driver {
-  id            Int      @id @default(autoincrement())
-  fullName      String
-  phone         String
-  email         String
-  licenseNumber String
-  licenseExpiry DateTime
-  isPartTime    Boolean  @default(false)
-  isAvailable   Boolean  @default(true)
-  licenseImage  String // ✅ NEW
-  rcImage       String // ✅ NEW
-  profileImage  String? 
+  id               Int       @id @default(autoincrement())
+  fullName         String
+  phone            String
+  email            String?
+  licenseNumber    String
+  licenseExpiry    DateTime
+  isPartTime       Boolean   @default(false)
+  isAvailable      Boolean   @default(true)
+  licenseImage     String?   // ← made optional to allow step-wise save
+  rcImage          String?   // ← made optional to allow step-wise save
+  profileImage     String?
 
-  whatsappPhone    String?     // NEW
-  altPhone         String?     // NEW
-  licenseIssueDate DateTime?   // NEW
-  dob              DateTime?   // NEW
-  gender           String?     // NEW  (e.g., "Male" | "Female" | "Other")
-  bloodGroup       String?     // NEW  (e.g., "A+", "O-", etc.)
-  aadhaarNumber    String?     // NEW
-  panNumber        String?     // NEW
-  voterId          String?     // NEW
-  address          String?     // NEW
+  whatsappPhone    String?
+  altPhone         String?
+  licenseIssueDate DateTime?
+  dob              DateTime?
+  gender           String?
+  bloodGroup       String?
+  aadhaarNumber    String?
+  panNumber        String?
+  voterId          String?
+  address          String?
 
   assignedVehicleId Int?     @unique
-  assignedVehicle   Vehicle? @relation("VehicleToDriver", fields: [assignedVehicleId], references: [id]) // ✅ Backward link
+  assignedVehicle   Vehicle? @relation("VehicleToDriver", fields: [assignedVehicleId], references: [id])
 
   vendorId Int?
-  vendor   Vendor? @relation("VendorDrivers", fields: [vendorId], references: [id])
+  vendor   Vendor?  @relation("VendorDrivers", fields: [vendorId], references: [id])
 
   userId Int?
-  user   User? @relation("UserDrivers", fields: [userId], references: [id])
+  user   User?      @relation("UserDrivers", fields: [userId], references: [id])
 
   trips           Trip[]
   Feedback        Feedback[]
   Vehicle         Vehicle[]
-  driverUpdates   DriverUpdate[] // ✅ new
-  tripAssistances TripAssistance[] // ✅ required list (always present, can be empty)
+  driverUpdates   DriverUpdate[]
+  tripAssistances TripAssistance[]
+
+  // 1:1 relations for your tabbed saves
+  costDetails   DriverCostDetails?
+  documents     DriverDocuments?
+  feedbackMeta  DriverFeedbackMeta?
+
+  @@index([vendorId])
+  @@index([phone])
+  @@index([licenseNumber])
+}
+
+model DriverCostDetails {
+  driverId             Int    @id
+  driver               Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  driverSalary         Float? @default(0)
+  foodCost             Float? @default(0)
+  accommodationCost    Float? @default(0)
+  bhattaCost           Float? @default(0)
+  earlyMorningCharges  Float? @default(0)
+  eveningCharges       Float? @default(0)
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("driver_cost_details")
+}
+
+model DriverDocuments {
+  driverId    Int    @id
+  driver      Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  aadharUrl   String?
+  panUrl      String?
+  voterUrl    String?
+  licenseUrl  String?
+  profileUrl  String? // keeps profile copy if you want
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("driver_documents")
+}
+
+model DriverFeedbackMeta {
+  driverId    Int    @id
+  driver      Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  ratingAvg   Float?
+  remarks     String?
+  reviews     Json?   // stores the table from your Review tab (array of items: id, rating, description, createdAt)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("driver_feedback_meta")
 }
 
 model VehicleType {
