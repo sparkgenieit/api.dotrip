@@ -206,6 +206,13 @@ export class DriversController {
     return this.drivers.getDriverFull(id);
   }
 
+    @Delete(':id')
+  async removeDriver(@Param('id', ParseIntPipe) id: number) {
+    const exists = await this.drivers.ensureDriver(id);
+    if (!exists) throw new NotFoundException('Driver not found');
+    return this.drivers.deleteDriver(id);
+  }
+
   /**
    * Quick ping for debugging route mapping
    * Path: GET /drivers/ping
