@@ -18,6 +18,7 @@ import { AdminModule } from './admin/admin.module';
 
 import { DriversModule } from './drivers/driver.module';
 import { TripsModule } from './trips/trips.module';
+import { VendorsModule } from './vendors/vendors.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { QuotesModule } from './quotes/quotes.module';
 
@@ -52,6 +53,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     WhatsAppModule,      // ✅ Register WhatsApp messaging
      InvoiceModule,
      DriverUpdatesModule,
+     VendorsModule,
   ],
   providers: [],
 })
