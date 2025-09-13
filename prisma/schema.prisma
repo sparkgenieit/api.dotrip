@@ -252,45 +252,50 @@ model VendorPermitCost {
 }
 
 model Vehicle {
-  id                 Int       @id @default(autoincrement())
-  name               String
-  model              String
-  image              String
-  additional_images   Json?
-  capacity           Int
-  registrationNumber String    @unique
-  price              Int       @default(0)
-  originalPrice      Int       @default(0)
-  status             String    @default("available")
-  comfortLevel       Int
-  lastServicedDate   DateTime?
-  vehicleTypeId      Int
-  createdBy          Role      @default(VENDOR) // either VENDOR or DRIVER
+  id                   Int       @id @default(autoincrement())
+  image                String
+  additional_images    Json?
+  registrationNumber   String    @unique
+  chassisNumber        String?   @unique   // <-- NEW
+  status               String    @default("available")
+  createdBy            Role      @default(VENDOR)
+  vehicleTypeId        Int
 
+  // Dates & maintenance
+  lastServicedDate     DateTime?  @db.Date
+
+  // Form fields
+  vehicleExpiryDate    DateTime?  @db.Date
+  extraKmCharge        Float?     @default(0)
+  earlyMorningCharges  Float?     @default(0)
+  eveningCharges       Float?     @default(0)
+  videoUrl             String?
+
+  // Insurance
   insurancePolicyNumber  String?
-  insuranceStartDate     DateTime?   @db.Date
-  insuranceEndDate       DateTime?   @db.Date
+  insuranceStartDate     DateTime? @db.Date
+  insuranceEndDate       DateTime? @db.Date
   insuranceContactNumber String?
   rtoCode                String?
 
-  // Owner (Vendor or Driver)
+  // Ownership
   vendorId      Int?
-  vendor        Vendor? @relation(fields: [vendorId], references: [id])
+  vendor        Vendor?  @relation(fields: [vendorId], references: [id])
   driverOwnerId Int?
-  driverOwner   Driver? @relation(fields: [driverOwnerId], references: [id])
+  driverOwner   Driver?  @relation(fields: [driverOwnerId], references: [id])
 
+  // Relations
   vehicleType  VehicleType @relation(fields: [vehicleTypeId], references: [id])
-  priceId      Int         @default(10)
-  vehiclePrice Price       @relation(fields: [priceId], references: [id])
   driver       Driver[]    @relation("VehicleToDriver")
   trips        Trip[]      @relation("VehicleTrips")
+
+  @@index([vendorId])
 }
 
 model Price {
   id        Int       @id @default(autoincrement())
   priceType String //peakHour surge normal
   price     Float
-  vehicles  Vehicle[]
 }
 
 model Driver {

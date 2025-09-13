@@ -1,4 +1,3 @@
-// === FILE: src/vendors/dto/vendor.dto.ts ======================================
 import { Type } from 'class-transformer';
 import { IsArray, IsEmail, IsInt, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 
@@ -134,11 +133,68 @@ export class UpsertOutstationChargesDto {
 // Tab 6 — Permit matrix
 export class PermitCostRowDto {
   @IsInt() vehicleTypeId: number;
-  @IsString() sourceState: string;         // "TN"
-  // Record<destState, amount>
-  costs: Record<string, string | number>;  // e.g., { KL: "1200", KA: 800 }
+  @IsString() sourceState: string;
+  costs: Record<string, string | number>;
 }
 export class UpsertPermitCostsDto {
   @IsArray() @ValidateNested({ each: true }) @Type(() => PermitCostRowDto)
   rows: PermitCostRowDto[];
 }
+
+// ---------------- Vehicles Tab DTO ----------------
+export class CreateVehicleLiteDto {
+  // identifiers
+  @IsOptional() @IsString()
+  chassisNumber?: string;
+
+  @IsOptional() @IsString()
+  registrationNumber?: string;
+
+  // dates (accept strings; service converts to Date)
+  @IsOptional() @IsString()
+  vehicleExpiryDate?: string;
+
+  @IsOptional() @IsString()
+  lastServicedDate?: string;
+
+  // charges (keep loose to avoid validation failures if FE sends strings)
+  @IsOptional()
+  extraKmCharge?: number | string;
+
+  @IsOptional()
+  earlyMorningCharges?: number | string;
+
+  @IsOptional()
+  eveningCharges?: number | string;
+
+  // media
+  @IsOptional() @IsString()
+  videoUrl?: string;
+
+  // insurance
+  @IsOptional() @IsString()
+  insurancePolicyNumber?: string;
+
+  @IsOptional() @IsString()
+  insuranceStartDate?: string;
+
+  @IsOptional() @IsString()
+  insuranceEndDate?: string;
+
+  @IsOptional() @IsString()
+  insuranceContactNumber?: string;
+
+  @IsOptional() @IsString()
+  rtoCode?: string;
+
+  // relations / misc
+  @IsOptional()
+  driverOwnerId?: number | null;
+
+  @IsOptional() @IsInt()
+  vehicleTypeId?: number;
+
+  @IsOptional() @IsArray()
+  galleryTypes?: string[];
+}
+export class UpdateVehicleLiteDto extends CreateVehicleLiteDto {}

@@ -61,6 +61,21 @@ export class VendorsController {
     return this.svc.upsertExtraCosts(id, dto);
   }
 
+  // ---- Tab 5: Extra costs (READ) ----
+@Get(':id/extra-costs')
+listExtraCosts(@Param('id', ParseIntPipe) id: number) {
+  return this.svc.listExtraCosts(id);
+}
+
+// ---- Vendor margin only (UPDATE) ----
+@Put(':id/margin')
+updateMargin(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() body: { vendorMarginPercent?: number | string; vendorMarginGstType?: 'Included' | 'Excluded'; vendorMarginGstPct?: number | string }
+) {
+  return this.svc.updateVendorMargin(id, body as any);
+}
+
   // ---- Tabs 3 & 5: Local limits + charges ----
   @Get(':id/local')
   listLocal(@Param('id', ParseIntPipe) id: number) {
