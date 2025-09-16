@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsEmail, IsInt, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { IsIn ,IsObject, IsPositive } from 'class-validator';
 
 // Tab 1 — Basic Info
 export class CreateVendorDto {
@@ -136,9 +137,25 @@ export class PermitCostRowDto {
   @IsString() sourceState: string;
   costs: Record<string, string | number>;
 }
+
+export class UpsertPermitCostItemDto {
+  @IsInt()
+  @IsPositive()
+  vehicleTypeId!: number;
+
+  @IsString()
+  sourceState!: string; // e.g. "AP"
+
+  @IsObject()
+  // { "KA": 500, "TN": 0, ... }
+  costs!: Record<string, number>;
+}
+
 export class UpsertPermitCostsDto {
-  @IsArray() @ValidateNested({ each: true }) @Type(() => PermitCostRowDto)
-  rows: PermitCostRowDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpsertPermitCostItemDto)
+  rows!: UpsertPermitCostItemDto[];
 }
 
 // ---------------- Vehicles Tab DTO ----------------

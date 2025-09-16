@@ -105,7 +105,7 @@ export class VendorsService {
   return this.prisma.vendor.create({
     data: {
       name: data.name,
-      companyReg: `VND-${Date.now()}`,
+      companyReg: data.invoiceCompanyName,
       email: data.email,
       primaryMobile: data.primaryMobile,
       altMobile: data.altMobile,
@@ -432,6 +432,27 @@ async updateVendorMargin(
       orderBy: [{ vehicleTypeId: 'asc' }],
     });
   }
+  
+  async listPermitCostsGrouped(vendorId: number) {
+    const rows = await this.prisma.vendorPermitCost.findMany({
+      where: { vendorId },
+      orderBy: [{ vehicleTypeId: 'asc' }, { sourceState: 'asc' }, { destState: 'asc' }],
+      select: { vehicleTypeId: true, sourceState: true, destState: true, amount: true },
+    });
+
+    const key = (vt: number, s: string) => `${vt}__${s}`;
+    const map = new Map<string, { vehicleTypeId: number; sourceState: string; costs: Record<string, number> }>();
+
+    for (const r of rows) {
+      const k = key(r.vehicleTypeId, r.sourceState);
+      if (!map.has(k)) {
+        map.set(k, { vehicleTypeId: r.vehicleTypeId, sourceState: r.sourceState, costs: {} });
+      }
+      map.get(k)!.costs[r.destState] = r.amount;
+    }
+
+    return Array.from(map.values());
+  }
 
   async listVehicleTypes() {
     return this.prisma.vehicleType.findMany({
@@ -440,34 +461,62 @@ async updateVendorMargin(
     });
   }
 
-  async upsertPermitCosts(vendorId: number, dto: UpsertPermitCostsDto) {
-    const ops: Prisma.PrismaPromise<any>[] = [];
-    for (const row of dto.rows) {
-      for (const [dest, amt] of Object.entries(row.costs || {})) {
-        ops.push(
-          this.prisma.vendorPermitCost.upsert({
-            where: {
-              vendorId_vehicleTypeId_sourceState_destState: {
-                vendorId,
-                vehicleTypeId: row.vehicleTypeId,
-                sourceState: row.sourceState,
-                destState: dest,
-              },
-            },
-            update: { amount: Number(amt) },
-            create: {
-              vendorId,
-              vehicleTypeId: row.vehicleTypeId,
-              sourceState: row.sourceState,
-              destState: dest,
-              amount: Number(amt),
-            },
-          })
-        );
-      }
-    }
-    return this.prisma.$transaction(ops);
+  async assertVehicleTypeExists(vehicleTypeId: number) {
+  const vt = await this.prisma.vehicleType.findUnique({
+    where: { id: vehicleTypeId },
+    select: { id: true },
+  });
+  if (!vt) throw new NotFoundException(`Vehicle type ${vehicleTypeId} not found`);
   }
+
+  async upsertPermitCosts(vendorId: number, dto: UpsertPermitCostsDto) {
+  const ops: Prisma.PrismaPromise<any>[] = [];
+
+  const normState = (s: string) => (s ?? '').trim().toUpperCase();
+  const toAmt = (v: any) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  for (const row of dto.rows ?? []) {
+    const vtId = Number(row.vehicleTypeId);
+    const src = normState(row.sourceState);
+    if (!vtId || !src) continue;
+
+    for (const [destRaw, amtRaw] of Object.entries(row.costs || {})) {
+      const dest = normState(destRaw);
+      const amt = toAmt(amtRaw);
+
+      ops.push(
+        this.prisma.vendorPermitCost.upsert({
+          where: {
+            vendorId_vehicleTypeId_sourceState_destState: {
+              vendorId,
+              vehicleTypeId: vtId,
+              sourceState: src,
+              destState: dest,
+            },
+          },
+          update: { amount: amt },
+          create: {
+            vendorId,
+            vehicleTypeId: vtId,
+            sourceState: src,
+            destState: dest,
+            amount: amt,
+          },
+        })
+      );
+    }
+  }
+
+  await this.prisma.$transaction(ops);
+  // return fresh rows for client to reflect latest
+  return this.prisma.vendorPermitCost.findMany({
+    where: { vendorId },
+    orderBy: [{ vehicleTypeId: 'asc' }, { sourceState: 'asc' }, { destState: 'asc' }],
+  });
+}
 
   // ====================== Vehicles CRUD =======================================
   async listVendorVehicles(vendorId: number) {

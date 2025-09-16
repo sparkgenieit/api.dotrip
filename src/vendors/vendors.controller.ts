@@ -16,6 +16,12 @@ export class VendorsController {
         return this.svc.listVehicleTypes();
     }
 
+  @Get('vehicle-types/all')
+  listVehicleTypesAlias() {
+    // Alias to support clients calling /vendors/vehicle-types/all
+    return this.svc.listVehicleTypes();
+  }
+
   // ---- Tab 1: Basic Info ----
   @Post()
   async create(@Body() dto: CreateVendorDto) {
@@ -114,8 +120,23 @@ updateMargin(
     return this.svc.listPermitCosts(id);
   }
 
+  @Get(':id/permit-costs/grouped')
+  listPermitCostsGrouped(@Param('id', ParseIntPipe) id: number) {
+    // Returns [{ vehicleTypeId, sourceState, costs: { KA: 500, TN: 0, ... } }]
+    return this.svc.listPermitCostsGrouped(id);
+  }
+
   @Put(':id/permit-costs')
   upsertPermit(@Param('id', ParseIntPipe) id: number, @Body() dto: UpsertPermitCostsDto) {
+    return this.svc.upsertPermitCosts(id, dto);
+  }
+
+  @Post(':id/permit-costs')
+  upsertPermitPost(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpsertPermitCostsDto
+  ) {
+    // Allow POST as an alias to PUT for upserts
     return this.svc.upsertPermitCosts(id, dto);
   }
 }

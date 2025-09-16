@@ -102,7 +102,33 @@ export class VendorService {
   });
 }
 
-  remove(id: number) {
-    return this.prisma.vendor.delete({ where: { id } });
+  async remove(id: number) {
+  // Block delete if any trips exist for this vendor's vehicles
+  const trips = await this.prisma.trip.count({
+    where: { vehicle: { vendorId: id } },
+  });
+  if (trips > 0) {
+    throw new ConflictException('Cannot delete vendor linked to trips.');
   }
+
+  await this.prisma.$transaction(async (tx) => {
+    // Delete all children that reference vendorId
+    await tx.vendorPermitCost.deleteMany({ where: { vendorId: id } });
+    await tx.vendorOutstationCharge.deleteMany({ where: { vendorId: id } });
+    await tx.vendorOutstationLimit.deleteMany({ where: { vendorId: id } });
+    await tx.vendorLocalCharge.deleteMany({ where: { vendorId: id } });
+    await tx.vendorLocalLimit.deleteMany({ where: { vendorId: id } });
+    await tx.vendorVehicleExtraCost.deleteMany({ where: { vendorId: id } });
+    await tx.vendorDriverCost.deleteMany({ where: { vendorId: id } });
+    await tx.vendorBranch.deleteMany({ where: { vendorId: id } });
+
+    // Remove vehicles last (trips already guarded above)
+    await tx.vehicle.deleteMany({ where: { vendorId: id } });
+
+    // Finally delete the vendor
+    await tx.vendor.delete({ where: { id } });
+  });
+
+  return { ok: true, id };
+}
 }
