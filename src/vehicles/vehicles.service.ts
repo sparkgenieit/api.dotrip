@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateVehicleDto } from "./dto/create-vehicle.dto";
 import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
+import { BadRequestException, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 function toDateOrNull(s?: string | null): Date | null {
   if (!s) return null;
@@ -63,244 +65,167 @@ async getAvailableVehicles(typeId: number, vendorUserId: number) {
 }
 
 async create(
-  dto: CreateVehicleDto & {
-    priceId?: number;
-    priceSpec?: { priceType: string; price: number; originalPrice?: number };
-  },
-  current: {
-    userId?: number;
-    role: string;
-    vendorId?: number;
-    driverId?: number;
-  }
+  dto: CreateVehicleDto,
+  current: { userId?: number; role: string; vendorId?: number; driverId?: number },
 ) {
-  // ✅ Always coerce to a single string (schema expects String, not String[])
-const singleImage = Array.isArray(dto.image) ? (dto.image[0] ?? undefined) : dto.image;
+  const toDateOrNull = (s?: string | null): Date | null => {
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(`${s}T00:00:00.000Z`);
+    const d = new Date(s);
+    return Number.isNaN(+d) ? null : d;
+  };
+  const toNumOrNull = (v: any) => {
+    if (v === '' || v == null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
 
-// normalize priceSpec and dates
-  const rawCreate = dto as any;
-  const psCreate =
-    rawCreate.priceSpec ??
-    (
-      (rawCreate['priceSpec[price]'] !== undefined) ||
-      (rawCreate['priceSpec[originalPrice]'] !== undefined) ||
-      (rawCreate['priceSpec[priceType]'] !== undefined) ||
-      (rawCreate['priceSpec[currency]'] !== undefined)
-    ? {
-        priceType: rawCreate['priceSpec[priceType]'],
-        price: rawCreate['priceSpec[price]'] !== undefined ? Number(rawCreate['priceSpec[price]']) : undefined,
-        originalPrice: rawCreate['priceSpec[originalPrice]'] !== undefined ? Number(rawCreate['priceSpec[originalPrice]']) : undefined,
-        currency: rawCreate['priceSpec[currency]'],
-      }
-    : undefined
-    );
-const lastServiceAt = dto.lastServicedDate ? toDateOrNull(dto.lastServicedDate as any) : undefined;
+  // normalize + validate reg.no.
+  const reg = (dto.registrationNumber ?? '').trim().toUpperCase();
+  if (!reg) throw new BadRequestException('registrationNumber is required');
 
-const data: any = {
-  name: dto.name,
-  model: dto.model,
-  image: singleImage, // ✅ normalized string
-  capacity: dto.capacity,
-
-  // prices with robust fallbacks
-  price: (typeof psCreate?.price === 'number' ? psCreate.price : (dto.price ?? 0)),
-  originalPrice: (typeof psCreate?.originalPrice === 'number'
-    ? psCreate.originalPrice
-
-    : (typeof psCreate?.price === 'number'
-        ? psCreate.price
-        : (dto.originalPrice ?? dto.price ?? 0))),
-
-
-  registrationNumber: dto.registrationNumber,
-  vehicleTypeId: dto.vehicleTypeId,
-  status: dto.status ?? 'available',
-  comfortLevel: dto.comfortLevel ?? 3,
-
-  // unified date parsing
-  lastServicedDate: lastServiceAt,
-
-  createdBy: current.role as any,
-
-  // Insurance & FC
-  insurancePolicyNumber: dto.insurancePolicyNumber ?? null,
-  insuranceContactNumber: dto.insuranceContactNumber ?? null,
-  rtoCode: dto.rtoCode ?? null,
-  insuranceStartDate: toDateOrNull(dto.insuranceStartDate as any),
-  insuranceEndDate: toDateOrNull(dto.insuranceEndDate as any),
-};
-
-  // Owner (Vendor or Driver)
-  if (current.role === 'VENDOR' && current.vendorId) {
-    data.vendorId = current.vendorId;
-  } else if (current.role === 'DRIVER' && current.driverId) {
-    data.driverOwnerId = current.driverId;
-  } else if (dto.vendorId) {
-    data.vendorId = dto.vendorId;
-  }
-
-  // ── PRICE RELATION HANDLING (Vehicle has priceId FK; no `vehiclePrice` relation field) ──
-  let priceId: number;
-
-  // Expand priceSpec even if fields came in as priceSpec[...]
-  const raw = dto as any;
-  const ps =
-    raw.priceSpec ??
-    (
-      (raw['priceSpec[price]'] !== undefined) ||
-      (raw['priceSpec[originalPrice]'] !== undefined) ||
-      (raw['priceSpec[priceType]'] !== undefined) ||
-      (raw['priceSpec[currency]'] !== undefined)
-    ? {
-        priceType: raw['priceSpec[priceType]'],
-        price: raw['priceSpec[price]'] !== undefined ? Number(raw['priceSpec[price]']) : undefined,
-        originalPrice: raw['priceSpec[originalPrice]'] !== undefined ? Number(raw['priceSpec[originalPrice]']) : undefined,
-        currency: raw['priceSpec[currency]'],
-      }
-    : undefined
-    );
-
-  if (dto.priceId) {
-    // honor an explicit priceId
-    const exists = await this.prisma.price.findUnique({
-      where: { id: dto.priceId },
-      select: { id: true },
-    });
-    if (!exists) throw new NotFoundException(`Price with ID ${dto.priceId} not found`);
-    priceId = dto.priceId;
-  } else if (ps && typeof ps.price === 'number') {
-    // create a Price row from provided spec
-    const created = await this.prisma.price.create({
-      data: {
-        priceType: ps.priceType ?? 'BASE',
-        price: ps.price,
-      },
-      select: { id: true },
-    });
-    priceId = created.id;
-  } else {
-    // final fallback: synthesize a BASE price from dto.price or 0
-    const base = typeof dto.price === 'number' ? dto.price : 0;
-    const created = await this.prisma.price.create({
-      data: {
-        priceType: 'BASE',
-        price: base,
-      },
-      select: { id: true },
-    });
-    priceId = created.id;
-  }
-
-  data.priceId = priceId;
-
-  return this.prisma.vehicle.create({
-    data,
-    include: {
-      vendor: true,
-      driver: true,
-      vehicleType: true,
-    },
+  // pre-check uniqueness for clearer error & to return existing id
+  const dup = await this.prisma.vehicle.findUnique({
+    where: { registrationNumber: reg },
+    select: { id: true },
   });
+  if (dup) {
+    throw new ConflictException({
+      message: 'Vehicle with this registration number already exists',
+      code: 'VEHICLE_DUPLICATE_REG',
+      vehicleId: dup.id,
+    });
+  }
+
+  const data: any = {
+    image: dto.image ?? '',
+    additional_images: dto.additional_images ?? undefined,
+
+    registrationNumber: reg,
+    chassisNumber: dto.chassisNumber ?? null,
+
+    vehicleTypeId: Number(dto.vehicleTypeId),
+    status: dto.status ?? 'available',
+
+    lastServicedDate: toDateOrNull(dto.lastServicedDate),
+    vehicleExpiryDate: toDateOrNull(dto.vehicleExpiryDate),
+
+    extraKmCharge: toNumOrNull(dto.extraKmCharge),
+    earlyMorningCharges: toNumOrNull(dto.earlyMorningCharges),
+    eveningCharges: toNumOrNull(dto.eveningCharges),
+    videoUrl: dto.videoUrl ?? null,
+
+    insurancePolicyNumber: dto.insurancePolicyNumber ?? null,
+    insuranceContactNumber: dto.insuranceContactNumber ?? null,
+    rtoCode: dto.rtoCode ?? null,
+    insuranceStartDate: toDateOrNull(dto.insuranceStartDate),
+    insuranceEndDate: toDateOrNull(dto.insuranceEndDate),
+
+    createdBy: (current?.role as any) ?? undefined,
+  };
+
+  // ownership
+  if (current?.role === 'VENDOR' && current.vendorId) {
+    data.vendorId = current.vendorId;
+  } else if (current?.role === 'DRIVER' && current.driverId) {
+    data.driverOwnerId = current.driverId;
+  } else if (dto.vendorId != null) {
+    data.vendorId = Number(dto.vendorId);
+  }
+
+  try {
+    return await this.prisma.vehicle.create({
+      data,
+      include: { vendor: true },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      throw new ConflictException({
+        message: 'Vehicle with this registration number already exists',
+        code: 'VEHICLE_DUPLICATE_REG',
+      });
+    }
+    throw e;
+  }
 }
 
 // REPLACE this whole block in src/vehicles/vehicles.service.ts  (#realcode)
 
 async update(id: number, dto: UpdateVehicleDto) {
-  // Pull out fields needing special handling; keep rest as-is
-  const {
-    vendorId,
-    vehicleTypeId,
-    lastServicedDate,
-    priceSpec,     // ❌ not a Vehicle column (we'll map it)
-    image,         // may arrive as string or string[]
-
-    // ✅ NEW: Insurance & FC fields
-    insurancePolicyNumber,
-    insuranceStartDate,
-    insuranceEndDate,
-    insuranceContactNumber,
-    rtoCode,
-
-    ...rest
-  } = dto as any;
-
-  const data: any = {
-    ...rest, // safe fields like name, model, status, price, originalPrice, capacity, comfortLevel, etc.
+  const toDateOrNull = (s?: string | null): Date | null => {
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(`${s}T00:00:00.000Z`);
+    const d = new Date(s);
+    return Number.isNaN(+d) ? null : d;
+  };
+  const toNumOrUndef = (v: any) => {
+    if (v === '' || v == null) return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
   };
 
-  // ✅ image is a single String in schema
-  if (typeof image !== 'undefined') {
-    data.image = Array.isArray(image) ? image[0] : image;
-  }
+  const existing = await this.prisma.vehicle.findUnique({ where: { id } });
+  if (!existing) throw new NotFoundException('Vehicle not found');
 
-  // ✅ date normalization
-  if (lastServicedDate) {
-    const d = new Date(lastServicedDate);
-    if (!isNaN(d.getTime())) data.lastServicedDate = d;
-  }
+  const data: any = {};
 
-  // ✅ vendor relation change (connect / disconnect)
-  if (typeof vendorId !== 'undefined') {
-    if (vendorId) {
-      data.vendor = { connect: { id: vendorId } };
-    } else {
-      data.vendor = { disconnect: true };
+  // normalize reg.no. and ensure uniqueness (excluding self)
+  if (dto.registrationNumber !== undefined) {
+    const reg = (dto.registrationNumber ?? '').trim().toUpperCase();
+    if (!reg) throw new ConflictException('registrationNumber cannot be empty');
+    const dup = await this.prisma.vehicle.findUnique({
+      where: { registrationNumber: reg },
+      select: { id: true },
+    });
+    if (dup && dup.id !== id) {
+      throw new ConflictException({
+        message: 'Vehicle with this registration number already exists',
+        code: 'VEHICLE_DUPLICATE_REG',
+        vehicleId: dup.id,
+      });
     }
+    data.registrationNumber = reg;
   }
 
-  // ✅ vehicleType relation change (use connect, not vehicleTypeId scalar)
-  if (typeof vehicleTypeId === 'number') {
-    data.vehicleType = { connect: { id: vehicleTypeId } };
-  }
+  if (dto.image !== undefined) data.image = dto.image ?? '';
+  if (dto.additional_images !== undefined) data.additional_images = dto.additional_images;
 
-  // ✅ map priceSpec (if caller still sends it) into Vehicle scalars
-  const raw = dto as any;
-  const psUpdate =
-    priceSpec ??
-    (
-      (raw['priceSpec[price]'] !== undefined) ||
-      (raw['priceSpec[originalPrice]'] !== undefined) ||
-      (raw['priceSpec[priceType]'] !== undefined) ||
-      (raw['priceSpec[currency]'] !== undefined)
-    ? {
-        priceType: raw['priceSpec[priceType]'],
-        price: raw['priceSpec[price]'] !== undefined ? Number(raw['priceSpec[price]']) : undefined,
-        originalPrice: raw['priceSpec[originalPrice]'] !== undefined ? Number(raw['priceSpec[originalPrice]']) : undefined,
-        currency: raw['priceSpec[currency]'],
-      }
-    : undefined
-    );
+  if (dto.chassisNumber !== undefined) data.chassisNumber = dto.chassisNumber ?? null;
+  if (dto.status !== undefined) data.status = dto.status;
 
-  if (psUpdate) {
-    if (typeof psUpdate.price === 'number') data.price = psUpdate.price;
-    if (typeof psUpdate.originalPrice === 'number') data.originalPrice = psUpdate.originalPrice;
-  }
+  if (dto.vehicleTypeId !== undefined) data.vehicleTypeId = Number(dto.vehicleTypeId);
+  if (dto.vendorId !== undefined) data.vendorId = dto.vendorId == null ? null : Number(dto.vendorId);
 
-  // ✅ NEW: Insurance & FC mapping
-  if (typeof insurancePolicyNumber !== 'undefined') {
-    data.insurancePolicyNumber = String(insurancePolicyNumber || '').trim() || null;
-  }
-  if (typeof insuranceContactNumber !== 'undefined') {
-    data.insuranceContactNumber = String(insuranceContactNumber || '').trim() || null;
-  }
-  if (typeof rtoCode !== 'undefined') {
-    data.rtoCode = String(rtoCode || '').trim() || null;
-  }
-  if (typeof insuranceStartDate !== 'undefined') {
-    data.insuranceStartDate = toDateOrNull(insuranceStartDate);
-  }
-  if (typeof insuranceEndDate !== 'undefined') {
-    data.insuranceEndDate = toDateOrNull(insuranceEndDate);
-  }
+  if (dto.lastServicedDate !== undefined) data.lastServicedDate = toDateOrNull(dto.lastServicedDate);
+  if (dto.vehicleExpiryDate !== undefined) data.vehicleExpiryDate = toDateOrNull(dto.vehicleExpiryDate);
 
-  // ❌ ensure forbidden keys never reach Prisma `data`
-  delete data.vehicleTypeId;
-  delete data.priceSpec;
+  if (dto.videoUrl !== undefined) data.videoUrl = dto.videoUrl ?? null;
 
-  return this.prisma.vehicle.update({
-    where: { id },
-    data,
-  });
+  if (dto.extraKmCharge !== undefined) data.extraKmCharge = toNumOrUndef(dto.extraKmCharge);
+  if (dto.earlyMorningCharges !== undefined) data.earlyMorningCharges = toNumOrUndef(dto.earlyMorningCharges);
+  if (dto.eveningCharges !== undefined) data.eveningCharges = toNumOrUndef(dto.eveningCharges);
+
+  if (dto.insurancePolicyNumber !== undefined) data.insurancePolicyNumber = dto.insurancePolicyNumber ?? null;
+  if (dto.insuranceContactNumber !== undefined) data.insuranceContactNumber = dto.insuranceContactNumber ?? null;
+  if (dto.rtoCode !== undefined) data.rtoCode = dto.rtoCode ?? null;
+  if (dto.insuranceStartDate !== undefined) data.insuranceStartDate = toDateOrNull(dto.insuranceStartDate);
+  if (dto.insuranceEndDate !== undefined) data.insuranceEndDate = toDateOrNull(dto.insuranceEndDate);
+
+  try {
+    return await this.prisma.vehicle.update({
+      where: { id },
+      data,
+      include: { vendor: true },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      throw new ConflictException({
+        message: 'Vehicle with this registration number already exists',
+        code: 'VEHICLE_DUPLICATE_REG',
+      });
+    }
+    throw e;
+  }
 }
 
 async remove(id: number) {

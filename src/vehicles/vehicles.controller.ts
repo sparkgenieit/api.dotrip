@@ -45,31 +45,46 @@ export class VehiclesController {
 @Post()
 @Roles("ADMIN", "VENDOR", "DRIVER")
 @UseInterceptors(
-  FileFieldsInterceptor([{ name: 'images', maxCount: 5 }], {
-    storage: multerVehicleStorage,
-  }),
+  FileFieldsInterceptor(
+    [
+      { name: 'image', maxCount: 1 },   // single file field
+      { name: 'images', maxCount: 5 },  // legacy/multi
+    ],
+    { storage: multerVehicleStorage },
+  ),
 )
 create(
   @Body() createVehicleDto: CreateVehicleDto,
   @Req() req: AuthRequest,
   @UploadedFiles()
-files: {
-    images?: any[];
+  files: {
+    image?: Express.Multer.File[];
+    images?: Express.Multer.File[];
   },
 ) {
-  if (files?.images?.length) {
-    const createImages =
-  Array.isArray(files?.images)
-    ? files.images.map((f: any) => `uploads/vehicles/${f.filename}`)
-    : [];
+  // Collect any file(s) the client sent
+  const fileList: Express.Multer.File[] = [
+    ...(files?.image ?? []),
+    ...(files?.images ?? []),
+  ];
 
-  if (createImages.length) {
-    // Prisma schema expects a single string for `image`
-    createVehicleDto.image = createImages[0];
-  }
+  if (fileList.length) {
+    const mapped = fileList.map((f) => `/uploads/vehicles/${f.filename}`); // NOTE: leading slash
+    // schema expects a *single* image string
+    createVehicleDto.image = mapped[0];
+    // keep any remaining as JSON array
+    if (mapped.length > 1) {
+      createVehicleDto.additional_images = mapped.slice(1);
+    }
   }
 
-  return this.vehiclesService.create(createVehicleDto, req.user);
+  const user = req.user as any; // { id, role, vendorId?, driverId? }
+  return this.vehiclesService.create(createVehicleDto, {
+    userId: user?.id,
+    role: user?.role,
+    vendorId: user?.vendorId,
+    driverId: user?.driverId,
+  });
 }
 
 
@@ -102,31 +117,39 @@ files: {
 
 @Patch(":id")
 @UseInterceptors(
-  FileFieldsInterceptor([{ name: 'images', maxCount: 5 }], {
-    storage: multerVehicleStorage,
-  }),
+  FileFieldsInterceptor(
+    [
+      { name: 'image', maxCount: 1 },
+      { name: 'images', maxCount: 5 },
+    ],
+    { storage: multerVehicleStorage },
+  ),
 )
 update(
-  @Param("id") id: string,
+  @Param('id') id: string,
   @Body() updateVehicleDto: UpdateVehicleDto,
   @UploadedFiles()
-files: {
-    images?: any[];
+  files: {
+    image?: Express.Multer.File[];
+    images?: Express.Multer.File[];
   },
 ) {
-  if (files?.images?.length) {
-    const updateImages =
-  Array.isArray(files?.images)
-    ? files.images.map((f: any) => `uploads/vehicles/${f.filename}`)
-    : [];
+  const fileList: Express.Multer.File[] = [
+    ...(files?.image ?? []),
+    ...(files?.images ?? []),
+  ];
 
-  if (updateImages.length) {
-    updateVehicleDto.image = updateImages[0];
-  }
+  if (fileList.length) {
+    const mapped = fileList.map((f) => `/uploads/vehicles/${f.filename}`);
+    updateVehicleDto.image = mapped[0];
+    if (mapped.length > 1) {
+      updateVehicleDto.additional_images = mapped.slice(1);
+    }
   }
 
   return this.vehiclesService.update(+id, updateVehicleDto);
 }
+
 
 
   @Delete(":id")
