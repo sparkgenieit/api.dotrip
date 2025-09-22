@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException,BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { Prisma } from '@prisma/client';
@@ -7,13 +7,16 @@ import { Prisma } from '@prisma/client';
 export class BookingService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: any) {
+ async create(
+    dto: any,
+    actor?: { id: number; role?: string; phone?: string }
+  ) {
     const {
-      phone,
+      // phone will be resolved below based on role
       pickupLocation,
       dropoffLocation,
 
-      // new split fields coming from the client
+      // split fields
       pickupDate,   // "YYYY-MM-DD"
       pickupTime,   // "HH:mm"
       returnDate,   // optional "YYYY-MM-DD"
@@ -28,7 +31,21 @@ export class BookingService {
       numVehicles = 1,
     } = dto;
 
-    const user = await this.prisma.user.findFirst({ where: { phone } });
+    const role = (actor?.role || '').toUpperCase();
+    const phoneToUse =
+      role === 'RIDER'
+        ? actor?.phone // force RIDER to use token phone
+        : dto.phone;   // ADMIN/VENDOR must provide phone in body
+
+    if (!phoneToUse) {
+      throw new BadRequestException(
+        role === 'RIDER'
+          ? 'Authenticated rider has no phone in token'
+          : 'phone is required in body for ADMIN/VENDOR'
+      );
+    }
+
+    const user = await this.prisma.user.findFirst({ where: { phone: phoneToUse } });
     if (!user) throw new NotFoundException('User not found');
 
     const pickupAddress = await this.prisma.addressBook.upsert({
@@ -63,11 +80,9 @@ export class BookingService {
       },
     });
 
-    // helpers: HH:mm -> Date (for TIME); YYYY-MM-DD -> Date (for DATE)
     const pad2 = (v: string | number) => String(v).padStart(2, '0');
     const toTimeDate = (hhmm: string) => {
       const [h = '00', m = '00'] = (hhmm || '').split(':');
-      // Prisma expects ISO-8601 DateTime; MySQL TIME ignores the date portion
       return new Date(`1970-01-01T${pad2(+h)}:${pad2(+m)}:00.000Z`);
     };
     const toDateOnly = (d?: string | null) =>
@@ -80,11 +95,10 @@ export class BookingService {
         pickupAddressId: pickupAddress.id,
         dropAddressId: dropAddress.id,
 
-        // align with Prisma types: DateTime @db.Date and DateTime @db.Time(0)
         pickupDate: toDateOnly(pickupDate)!,          // required
         pickupTime: toTimeDate(pickupTime),           // required
 
-        returnDate: toDateOnly(returnDate),           // optional
+        returnDate: toDateOnly(returnDate),
         returnTime: returnTime ? toTimeDate(returnTime) : null,
 
         fromCityId,
@@ -233,3 +247,6 @@ async getAssignableVehicles(vehicleTypeId: number, user: { id: number; role: str
 }
 
 }
+
+
+

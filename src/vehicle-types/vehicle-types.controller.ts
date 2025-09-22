@@ -34,19 +34,18 @@ const multerVehicleTypeStorage = diskStorage({
 });
 
 @Controller('vehicle-types')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class VehicleTypesController {
   constructor(private readonly service: VehicleTypesService) {}
 
   // LIST
   @Get()
-  @Roles('ADMIN', 'VENDOR', 'DRIVER')
   findAll() {
     return this.service.findAll();
   }
 
   // GET BY ID
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'VENDOR', 'DRIVER')
   findOne(@Param('id') id: string) {
     return this.service.findOne(+id);
@@ -54,6 +53,7 @@ export class VehicleTypesController {
 
   // CREATE (inline single image upload; field name: "image")
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN') // adjust if vendors should manage types
   @UseInterceptors(
     FileFieldsInterceptor([{ name: 'image', maxCount: 1 }], {
@@ -78,6 +78,7 @@ export class VehicleTypesController {
 
   // UPDATE (inline single image upload; only replace if provided)
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN') // adjust if needed
   @UseInterceptors(
     FileFieldsInterceptor([{ name: 'image', maxCount: 1 }], {
@@ -102,6 +103,7 @@ export class VehicleTypesController {
 
   // DELETE
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   remove(@Param('id') id: string) {
     return this.service.remove(+id);

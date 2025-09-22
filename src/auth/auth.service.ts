@@ -152,7 +152,7 @@ export class AuthService {
         data: {
           phone: mobileNumber,
           role: 'RIDER',
-          name: 'PhoneUser',
+          name: `RIDER_${mobileNumber}`,
           email: `user_${mobileNumber}@otpuser.com`, // fallback if email is required
           password,
         },

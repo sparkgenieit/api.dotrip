@@ -61,11 +61,31 @@ export class UsersService {
   }
 
   // ✅ Get user by ID (basic profile fetch)
-  async getUserById(id: number) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('User not found');
-    return user;
-  }
+// src/users/users.service.ts
+async getUserById(id: number) {
+  return this.prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+      createdAt: true,
+      updatedAt: true,
+      addressBooks: {
+        select: {
+          id: true,
+          type: true,
+          address: true,
+          city: true,
+          pinCode: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+}
 
   // ✅ Update basic user profile
   async updateUser(userId: number, dto: Partial<{ name: string; phone: string; age: number; gender: string }>) {
