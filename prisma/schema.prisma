@@ -62,106 +62,336 @@ model User {
 }
 
 model Vendor {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   name       String
-  companyReg String   @unique
-  createdAt  DateTime @default(now())
+  companyReg String    @unique
+  createdAt  DateTime  @default(now())
 
-  userId Int?  @unique
-  vendor User? @relation("UserOwnsVendor", fields: [userId], references: [id])
-
-  drivers  Driver[]   @relation("VendorDrivers")
+  // (existing relations you already rely on)
+  userId   Int?   @unique
+  vendor   User?  @relation("UserOwnsVendor", fields: [userId], references: [id])
+  drivers  Driver[]     @relation("VendorDrivers")
   vehicles Vehicle[]
-  trips    Trip[]     @relation("VendorTrips")
-  earnings Earnings[] @relation("VendorEarnings")
+  trips    Trip[]       @relation("VendorTrips")
+  earnings Earnings[]   @relation("VendorEarnings")
   Booking  Booking[]
   Quote    Quote[]
   invoices Invoice[]
 
+  // === NEW: Basic Info (contact + address) ====================================
+  email           String?
+  primaryMobile   String?
+  altMobile       String?
+  otherNumber     String?
+  country         String?   @default("India")
+  state           String?
+  city            String?
+  pincode         String?
+  address         String?
+
+  // === NEW: Logo + Invoice details ============================================
+  logoUrl             String?
+  invoiceCompanyName  String?
+  invoiceAddress      String?
+  invoicePincode      String?
+  invoiceGstin        String?
+  invoicePan          String?
+  invoiceContactNo    String?
+  invoiceEmail        String?
+
+  // === NEW: Vendor margin (also edited in Pricebook tab) ======================
+  vendorMarginPercent  Float?
+  vendorMarginGstType  String? // "Included" | "Excluded"
+  vendorMarginGstPct   Int?    // 0 | 5 | 12 | 18 | 28
+
+  // children (each tab saves here)
+  branches            VendorBranch[]
+  driverCosts         VendorDriverCost[]
+  extraCosts          VendorVehicleExtraCost[]
+  localLimits         VendorLocalLimit[]
+  localCharges        VendorLocalCharge[]
+  outstationLimits    VendorOutstationLimit[]
+  outstationCharges   VendorOutstationCharge[]
+  permitCosts         VendorPermitCost[]
+
   @@map("vendors")
 }
 
-model Vehicle {
-  id                 Int       @id @default(autoincrement())
-  name               String
-  model              String
-  image              String
-  additional_images   Json?
-  capacity           Int
-  registrationNumber String    @unique
-  price              Int       @default(0)
-  originalPrice      Int       @default(0)
-  status             String    @default("available")
-  comfortLevel       Int
-  lastServicedDate   DateTime?
-  vehicleTypeId      Int
-  createdBy          Role      @default(VENDOR) // either VENDOR or DRIVER
+model VendorBranch {
+  id            Int      @id @default(autoincrement())
+  vendorId      Int
+  name          String
+  location      String?
+  email         String?
+  primaryMobile String?
+  altMobile     String?
+  country       String?  @default("India")
+  state         String?
+  city          String?
+  pincode       String?
+  gstType       String?  // "Included" | "Excluded"
+  gstPercent    Int?     // 0 | 5 | 12 | 18 | 28
+  address       String?
+  createdAt     DateTime @default(now())
 
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@index([vendorId])
+  @@unique([vendorId, name])
+}
+
+model VendorDriverCost {
+  id             Int      @id @default(autoincrement())
+  vendorId       Int
+  vehicleTypeId  Int
+  driverBhatta   Float @default(0)
+  foodCost       Float @default(0)
+  accomodationCost Float @default(0) // spell matches your table renders
+  extraCost      Float @default(0)
+  morningPerHour Float @default(0)
+  eveningPerHour Float @default(0)
+  createdAt      DateTime @default(now())
+
+  vendor      Vendor      @relation(fields: [vendorId], references: [id])
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+
+  @@unique([vendorId, vehicleTypeId])
+  @@index([vendorId])
+}
+
+model VendorVehicleExtraCost {
+  id            Int      @id @default(autoincrement())
+  vendorId      Int
+  vehicleTypeId Int
+  extraKm       Float @default(0)
+  extraHour     Float @default(0)
+  earlyMorning  Float @default(0)  // before 6 AM
+  evening       Float @default(0)  // after 8 PM
+
+  vendor      Vendor      @relation(fields: [vendorId], references: [id])
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+
+  @@unique([vendorId, vehicleTypeId])
+  @@index([vendorId])
+}
+
+model VendorLocalLimit {
+  id            Int      @id @default(autoincrement())
+  vendorId      Int
+  vehicleTypeId Int
+  title         String
+  hours         Int
+  km            Int
+
+  vendor      Vendor      @relation(fields: [vendorId], references: [id])
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+
+  @@index([vendorId, vehicleTypeId])
+}
+
+// === ADD: Local charge (Tab 5)  ✅ uses rangeKey to allow upsert =================
+model VendorLocalCharge {
+  id            Int      @id @default(autoincrement())
+  vendorId      Int
+  vehicleTypeId Int
+  rangeKey      String   @default("ALL") // e.g. "ALL" or "2025-01-01..2025-01-31"
+  startDate     DateTime?
+  endDate       DateTime?
+  amount        Float    @default(0)
+
+  vendor      Vendor      @relation(fields: [vendorId], references: [id])
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+
+  @@unique([vendorId, vehicleTypeId, rangeKey])
+  @@index([vendorId, vehicleTypeId])
+}
+
+model VendorOutstationLimit {
+  id            Int      @id @default(autoincrement())
+  vendorId      Int
+  vehicleTypeId Int
+  title         String
+  km            Int
+
+  vendor      Vendor      @relation(fields: [vendorId], references: [id])
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+
+  @@index([vendorId, vehicleTypeId])
+}
+
+// === ADD: Outstation charge (Tab 5)  ✅ uses rangeKey to allow upsert ===========
+model VendorOutstationCharge {
+  id            Int      @id @default(autoincrement())
+  vendorId      Int
+  vehicleTypeId Int
+  rangeKey      String   @default("ALL") // e.g. "ALL" or "2025-02-01..2025-02-28"
+  startDate     DateTime?
+  endDate       DateTime?
+  amount        Float    @default(0)
+
+  vendor      Vendor      @relation(fields: [vendorId], references: [id])
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+
+  @@unique([vendorId, vehicleTypeId, rangeKey])
+  @@index([vendorId, vehicleTypeId])
+}
+
+model VendorPermitCost {
+  id            Int      @id @default(autoincrement())
+  vendorId      Int
+  vehicleTypeId Int
+  sourceState   String   // e.g. "TN"
+  destState     String   // e.g. "KL"
+  amount        Float    @default(0)
+
+  vendor      Vendor      @relation(fields: [vendorId], references: [id])
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+
+  @@unique([vendorId, vehicleTypeId, sourceState, destState])
+  @@index([vendorId, vehicleTypeId])
+}
+
+model Vehicle {
+  id                   Int       @id @default(autoincrement())
+  image                String
+  additional_images    Json?
+  registrationNumber   String    @unique
+  chassisNumber        String?   @unique   // <-- NEW
+  status               String    @default("available")
+  createdBy            Role      @default(VENDOR)
+  vehicleTypeId        Int
+
+  // Dates & maintenance
+  lastServicedDate     DateTime?  @db.Date
+
+  // Form fields
+  vehicleExpiryDate    DateTime?  @db.Date
+  extraKmCharge        Float?     @default(0)
+  earlyMorningCharges  Float?     @default(0)
+  eveningCharges       Float?     @default(0)
+  videoUrl             String?
+
+  // Insurance
   insurancePolicyNumber  String?
-  insuranceStartDate     DateTime?   @db.Date
-  insuranceEndDate       DateTime?   @db.Date
+  insuranceStartDate     DateTime? @db.Date
+  insuranceEndDate       DateTime? @db.Date
   insuranceContactNumber String?
   rtoCode                String?
 
-  // Owner (Vendor or Driver)
+  // Ownership
   vendorId      Int?
-  vendor        Vendor? @relation(fields: [vendorId], references: [id])
+  vendor        Vendor?  @relation(fields: [vendorId], references: [id])
   driverOwnerId Int?
-  driverOwner   Driver? @relation(fields: [driverOwnerId], references: [id])
+  driverOwner   Driver?  @relation(fields: [driverOwnerId], references: [id])
 
+  // Relations
   vehicleType  VehicleType @relation(fields: [vehicleTypeId], references: [id])
-  priceId      Int         @default(10)
-  vehiclePrice Price       @relation(fields: [priceId], references: [id])
   driver       Driver[]    @relation("VehicleToDriver")
   trips        Trip[]      @relation("VehicleTrips")
+
+  @@index([vendorId])
 }
 
 model Price {
   id        Int       @id @default(autoincrement())
   priceType String //peakHour surge normal
   price     Float
-  vehicles  Vehicle[]
 }
 
-// ✅ Updated Prisma Schema for Driver model with new UI fields
 model Driver {
-  id            Int      @id @default(autoincrement())
-  fullName      String
-  phone         String
-  email         String
-  licenseNumber String
-  licenseExpiry DateTime
-  isPartTime    Boolean  @default(false)
-  isAvailable   Boolean  @default(true)
-  licenseImage  String // ✅ NEW
-  rcImage       String // ✅ NEW
-  profileImage  String? 
+  id               Int       @id @default(autoincrement())
+  fullName         String
+  phone            String
+  email            String?
+  licenseNumber    String
+  licenseExpiry    DateTime
+  isPartTime       Boolean   @default(false)
+  isAvailable      Boolean   @default(true)
+  licenseImage     String?   // ← made optional to allow step-wise save
+  rcImage          String?   // ← made optional to allow step-wise save
+  profileImage     String?
 
-  whatsappPhone    String?     // NEW
-  altPhone         String?     // NEW
-  licenseIssueDate DateTime?   // NEW
-  dob              DateTime?   // NEW
-  gender           String?     // NEW  (e.g., "Male" | "Female" | "Other")
-  bloodGroup       String?     // NEW  (e.g., "A+", "O-", etc.)
-  aadhaarNumber    String?     // NEW
-  panNumber        String?     // NEW
-  voterId          String?     // NEW
-  address          String?     // NEW
+  whatsappPhone    String?
+  altPhone         String?
+  licenseIssueDate DateTime?
+  dob              DateTime?
+  gender           String?
+  bloodGroup       String?
+  aadhaarNumber    String?
+  panNumber        String?
+  voterId          String?
+  address          String?
 
   assignedVehicleId Int?     @unique
-  assignedVehicle   Vehicle? @relation("VehicleToDriver", fields: [assignedVehicleId], references: [id]) // ✅ Backward link
+  assignedVehicle   Vehicle? @relation("VehicleToDriver", fields: [assignedVehicleId], references: [id])
 
   vendorId Int?
-  vendor   Vendor? @relation("VendorDrivers", fields: [vendorId], references: [id])
+  vendor   Vendor?  @relation("VendorDrivers", fields: [vendorId], references: [id])
 
   userId Int?
-  user   User? @relation("UserDrivers", fields: [userId], references: [id])
+  user   User?      @relation("UserDrivers", fields: [userId], references: [id])
 
   trips           Trip[]
   Feedback        Feedback[]
   Vehicle         Vehicle[]
-  driverUpdates   DriverUpdate[] // ✅ new
-  tripAssistances TripAssistance[] // ✅ required list (always present, can be empty)
+  driverUpdates   DriverUpdate[]
+  tripAssistances TripAssistance[]
+
+  // 1:1 relations for your tabbed saves
+  costDetails   DriverCostDetails?
+  documents     DriverDocuments?
+  feedbackMeta  DriverFeedbackMeta?
+
+  @@index([vendorId])
+  @@index([phone])
+  @@index([licenseNumber])
+}
+
+model DriverCostDetails {
+  driverId             Int    @id
+  driver               Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  driverSalary         Float? @default(0)
+  foodCost             Float? @default(0)
+  accommodationCost    Float? @default(0)
+  bhattaCost           Float? @default(0)
+  earlyMorningCharges  Float? @default(0)
+  eveningCharges       Float? @default(0)
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("driver_cost_details")
+}
+
+model DriverDocuments {
+  driverId    Int    @id
+  driver      Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  aadharUrl   String?
+  panUrl      String?
+  voterUrl    String?
+  licenseUrl  String?
+  profileUrl  String? // keeps profile copy if you want
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("driver_documents")
+}
+
+model DriverFeedbackMeta {
+  driverId    Int    @id
+  driver      Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  ratingAvg   Float?
+  remarks     String?
+  reviews     Json?   // stores the table from your Review tab (array of items: id, rating, description, createdAt)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("driver_feedback_meta")
 }
 
 model VehicleType {
@@ -170,9 +400,20 @@ model VehicleType {
   estimatedRatePerKm Float     @default(10.0)
   baseFare           Float     @default(0.0)
   seatingCapacity    Int       @default(4)
-  image              String?  
+  image              String?
+
+  // existing relations
   vehicles           Vehicle[]
   bookings           Booking[]
+
+  // NEW: opposite relations for all vendor* tables that reference VehicleType
+  vendorDriverCosts       VendorDriverCost[]
+  vendorExtraCosts        VendorVehicleExtraCost[]
+  vendorLocalLimits       VendorLocalLimit[]
+  vendorLocalCharges      VendorLocalCharge[]
+  vendorOutstationLimits  VendorOutstationLimit[]
+  vendorOutstationCharges VendorOutstationCharge[]
+  vendorPermitCosts       VendorPermitCost[]
 }
 
 

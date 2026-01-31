@@ -16,7 +16,6 @@ import { Roles } from '../auth/roles.decorator';
 import { VehicleTypesService } from './vehicle-types.service';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import type { File as MulterFile } from 'multer';
 import * as fs from 'fs';
 import { join, extname } from 'path';
 
@@ -27,8 +26,10 @@ const multerVehicleTypeStorage = diskStorage({
     fs.mkdirSync(uploadPath, { recursive: true });
     cb(null, uploadPath);
   },
-  filename: (_req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+  filename: (_req, file: Express.Multer.File, cb) => {
+    const safe = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+    const base = safe.replace(/\.[^.]+$/, '');
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}_${base}${extname(file.originalname)}`;
     cb(null, uniqueName);
   },
 });
@@ -37,13 +38,13 @@ const multerVehicleTypeStorage = diskStorage({
 export class VehicleTypesController {
   constructor(private readonly service: VehicleTypesService) {}
 
-  // LIST
+  // PUBLIC LIST
   @Get()
   findAll() {
     return this.service.findAll();
   }
 
-  // GET BY ID
+  // PROTECTED GET BY ID
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'VENDOR', 'DRIVER')
@@ -51,7 +52,7 @@ export class VehicleTypesController {
     return this.service.findOne(+id);
   }
 
-  // CREATE (inline single image upload; field name: "image")
+  // PROTECTED CREATE (inline single image upload; field name: "image")
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN') // adjust if vendors should manage types
@@ -63,12 +64,12 @@ export class VehicleTypesController {
   create(
     @Body() body: any,
     @UploadedFiles()
-    files: {
-      image?: MulterFile[];
+    files?: {
+      image?: Express.Multer.File[];
     },
   ) {
     if (files?.image?.[0]) {
-      body.image = `uploads/vehicle-types/${files.image[0].filename}`; // schema: String
+      body.image = `uploads/vehicle-types/${files.image[0].filename}`; // schema: String path
     } else {
       // allow passing a URL/path via form field as fallback
       body.image = body.image || body.imageUrl || body.image_url;
@@ -76,7 +77,7 @@ export class VehicleTypesController {
     return this.service.create(body);
   }
 
-  // UPDATE (inline single image upload; only replace if provided)
+  // PROTECTED UPDATE (inline single image upload; only replace if provided)
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN') // adjust if needed
@@ -89,8 +90,8 @@ export class VehicleTypesController {
     @Param('id') id: string,
     @Body() body: any,
     @UploadedFiles()
-    files: {
-      image?: MulterFile[];
+    files?: {
+      image?: Express.Multer.File[];
     },
   ) {
     if (files?.image?.[0]) {
@@ -101,7 +102,7 @@ export class VehicleTypesController {
     return this.service.update(+id, body);
   }
 
-  // DELETE
+  // PROTECTED DELETE
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
